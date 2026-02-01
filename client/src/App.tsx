@@ -1,8 +1,9 @@
 /**
- * FLaMO App
- * Main application with routing.
+ * FLaMO Super App
+ * Main application with routing and splash screen.
  */
 
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -24,13 +25,15 @@ import Profile from "./pages/Profile";
 import Discover from "./pages/Discover";
 import Matches from "./pages/Matches";
 import Chat from "./pages/Chat";
+import SplashScreen from "./pages/SplashScreen";
+import ProfileSetup from "./pages/ProfileSetup";
 
 // Wrapper component to handle onboarding redirect
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
   const hasCompletedOnboarding = useOnboardingStore(state => state.hasCompletedOnboarding);
   
   // If user hasn't completed onboarding, redirect to onboarding
-  if (!hasCompletedOnboarding && typeof window !== 'undefined' && window.location.pathname !== '/onboarding') {
+  if (!hasCompletedOnboarding && typeof window !== 'undefined' && window.location.pathname !== '/onboarding' && window.location.pathname !== '/setup') {
     return <Redirect to="/onboarding" />;
   }
   
@@ -40,8 +43,9 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
-      {/* Onboarding route - always accessible */}
+      {/* Onboarding and setup routes - always accessible */}
       <Route path="/onboarding" component={Onboarding} />
+      <Route path="/setup" component={ProfileSetup} />
       
       {/* Protected routes - require onboarding completion */}
       <Route path="/">
@@ -109,6 +113,22 @@ function Router() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  // Show splash screen on initial load
+  useEffect(() => {
+    // Check if this is a fresh page load (not a navigation)
+    const hasSeenSplash = sessionStorage.getItem('flamo_splash_seen');
+    if (hasSeenSplash) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('flamo_splash_seen', 'true');
+    setShowSplash(false);
+  };
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
@@ -117,14 +137,20 @@ function App() {
             position="top-center"
             toastOptions={{
               style: {
-                background: 'oklch(0.15 0.02 280 / 0.9)',
-                border: '1px solid oklch(0.30 0.03 280)',
-                color: 'oklch(0.92 0.02 250)',
+                background: 'rgba(15, 15, 20, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#FFFFFF',
                 backdropFilter: 'blur(12px)',
+                borderRadius: '16px',
+                boxShadow: '0 8px 32px rgba(255, 106, 0, 0.2)',
               },
             }}
           />
-          <Router />
+          {showSplash ? (
+            <SplashScreen onComplete={handleSplashComplete} />
+          ) : (
+            <Router />
+          )}
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

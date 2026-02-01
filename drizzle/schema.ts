@@ -36,7 +36,7 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
 
 /**
- * One-time moment purchases.
+ * One-time moment purchases - now "Emotional Permissions".
  */
 export const momentPurchases = mysqlTable("moment_purchases", {
   id: int("id").autoincrement().primaryKey(),
@@ -49,6 +49,46 @@ export const momentPurchases = mysqlTable("moment_purchases", {
 
 export type MomentPurchase = typeof momentPurchases.$inferSelect;
 export type InsertMomentPurchase = typeof momentPurchases.$inferInsert;
+
+/**
+ * Emotional Permissions - soft monetization
+ * "Stay Longer", "Return Once", "Send a Private Signal", "Unlock Tonight", "Deeper Access"
+ */
+export const emotionalPermissions = mysqlTable("emotional_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  
+  // Permission type
+  permissionType: mysqlEnum("permissionType", [
+    "stay_longer",      // $2.99 - extend session
+    "return_once",      // $1.99 - bookmark moment
+    "private_signal",   // $0.99 - glow notification
+    "unlock_tonight",   // $4.99 - intimate modes until sunrise
+    "deeper_access"     // $6.99/month - full belonging
+  ]).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["active", "used", "expired"]).default("active").notNull(),
+  
+  // For time-limited permissions
+  expiresAt: timestamp("expiresAt"),
+  
+  // For "Return Once" - which moment/mode
+  targetModeId: varchar("targetModeId", { length: 64 }),
+  
+  // For "Private Signal" - recipient
+  targetUserId: int("targetUserId"),
+  
+  // Payment
+  price: int("price").notNull(), // in cents
+  stripePaymentId: varchar("stripePaymentId", { length: 255 }),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  usedAt: timestamp("usedAt"),
+});
+
+export type EmotionalPermission = typeof emotionalPermissions.$inferSelect;
+export type InsertEmotionalPermission = typeof emotionalPermissions.$inferInsert;
 
 /**
  * Shared presence sessions.
@@ -107,15 +147,25 @@ export type InsertOwnerNotification = typeof ownerNotifications.$inferInsert;
 /**
  * User profiles for matching.
  * Contains preferences and discovery settings.
+ * UPDATED: Added username, currentMood, sexualityPreference, photoUrl required
  */
 export const userProfiles = mysqlTable("user_profiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
   
+  // NEW: Core identity (minimal data)
+  username: varchar("username", { length: 20 }),
+  currentMood: mysqlEnum("currentMood", ["focus", "chill", "sleep", "romance", "bond", "afterglow"]).default("chill"),
+  sexualityPreference: mysqlEnum("sexualityPreference", ["men", "women", "everyone", "vibes"]).default("everyone"),
+  
   // Display info
   displayName: varchar("displayName", { length: 100 }),
   bio: text("bio"),
   avatarUrl: text("avatarUrl"),
+  
+  // NEW: Photo is required for trust
+  photoUrl: text("photoUrl"),
+  hasCompletedProfile: boolean("hasCompletedProfile").default(false).notNull(),
   
   // Location (stored as decimal for precision)
   latitude: decimal("latitude", { precision: 10, scale: 8 }),
@@ -158,6 +208,9 @@ export const matches = mysqlTable("matches", {
   
   // When the match became mutual (both users accepted)
   matchedAt: timestamp("matchedAt"),
+  
+  // NEW: VibeLock status
+  vibeLockUnlocked: boolean("vibeLockUnlocked").default(false).notNull(),
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -309,7 +362,7 @@ export const payments = mysqlTable("payments", {
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   
   // Payment details
-  type: mysqlEnum("type", ["subscription", "moment_purchase"]).notNull(),
+  type: mysqlEnum("type", ["subscription", "moment_purchase", "emotional_permission"]).notNull(),
   amount: int("amount").notNull(), // in cents
   currency: varchar("currency", { length: 3 }).default("usd").notNull(),
   status: mysqlEnum("status", ["pending", "succeeded", "failed", "refunded"]).default("pending").notNull(),
@@ -323,3 +376,129 @@ export const payments = mysqlTable("payments", {
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = typeof payments.$inferInsert;
+
+// ============================================
+// VIBELOCK SYSTEM TABLES
+// ============================================
+
+/**
+ * VibeLock sessions - two users lock into same vibe together.
+ * Fun question-based matching game before chat unlocks.
+ */
+export const vibeLockSessions = mysqlTable("vibe_lock_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // The match this belongs to
+  matchId: int("matchId").notNull(),
+  
+  // The question being asked
+  question: text("question").notNull(),
+  
+  // User 1 (initiator)
+  user1Id: int("user1Id").notNull(),
+  user1Answer: varchar("user1Answer", { length: 50 }),
+  
+  // User 2 (responder)
+  user2Id: int("user2Id").notNull(),
+  user2Answer: varchar("user2Answer", { length: 50 }),
+  
+  // Result
+  score: int("score"), // 0-100 vibe alignment
+  completed: boolean("completed").default(false).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type VibeLockSession = typeof vibeLockSessions.$inferSelect;
+export type InsertVibeLockSession = typeof vibeLockSessions.$inferInsert;
+
+/**
+ * Daily VibeLock allowance tracking.
+ * Free users get limited VibeLocks per day.
+ */
+export const vibeLockAllowance = mysqlTable("vibe_lock_allowance", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  userId: int("userId").notNull(),
+  
+  // Date (YYYY-MM-DD format)
+  date: varchar("date", { length: 10 }).notNull(),
+  
+  // Count used today
+  usedCount: int("usedCount").default(0).notNull(),
+  
+  // Max allowed (free: 3, premium: unlimited)
+  maxAllowed: int("maxAllowed").default(3).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type VibeLockAllowance = typeof vibeLockAllowance.$inferSelect;
+export type InsertVibeLockAllowance = typeof vibeLockAllowance.$inferInsert;
+
+// ============================================
+// EVENTS SYSTEM TABLES
+// ============================================
+
+/**
+ * Mood-based events/gatherings.
+ * Users can create and join events near them.
+ */
+export const events = mysqlTable("events", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Creator
+  creatorId: int("creatorId").notNull(),
+  
+  // Event details
+  title: varchar("title", { length: 100 }).notNull(),
+  description: text("description"),
+  
+  // Mood/vibe
+  moodType: mysqlEnum("moodType", ["focus", "chill", "sleep", "romance", "bond", "afterglow"]).notNull(),
+  
+  // Tags (stored as JSON array)
+  tags: text("tags"), // JSON: ["rooftop", "sunset", "music"]
+  
+  // Location
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  locationName: varchar("locationName", { length: 200 }),
+  
+  // Timing
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt"),
+  
+  // Capacity
+  maxAttendees: int("maxAttendees"),
+  
+  // Status
+  status: mysqlEnum("status", ["upcoming", "active", "ended", "cancelled"]).default("upcoming").notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Event = typeof events.$inferSelect;
+export type InsertEvent = typeof events.$inferInsert;
+
+/**
+ * Event attendees.
+ * Tracks who's joining which events.
+ */
+export const eventAttendees = mysqlTable("event_attendees", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  eventId: int("eventId").notNull(),
+  userId: int("userId").notNull(),
+  
+  // RSVP status
+  status: mysqlEnum("status", ["interested", "going", "maybe", "not_going"]).default("interested").notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type EventAttendee = typeof eventAttendees.$inferSelect;
+export type InsertEventAttendee = typeof eventAttendees.$inferInsert;

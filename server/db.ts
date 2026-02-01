@@ -931,3 +931,212 @@ export async function updateUserStripeCustomerId(userId: number, stripeCustomerI
     .set({ stripeCustomerId })
     .where(eq(payments.userId, userId));
 }
+
+
+// ============= VibeLock Helpers =============
+
+import {
+  vibeLockSessions,
+  InsertVibeLockSession,
+  emotionalPermissions,
+  InsertEmotionalPermission,
+} from "../drizzle/schema";
+
+export async function getVibeLockSession(matchId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select()
+    .from(vibeLockSessions)
+    .where(and(
+      eq(vibeLockSessions.matchId, matchId),
+      eq(vibeLockSessions.completed, false)
+    ))
+    .orderBy(desc(vibeLockSessions.createdAt))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function getVibeLockSessionById(sessionId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select()
+    .from(vibeLockSessions)
+    .where(eq(vibeLockSessions.id, sessionId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function createVibeLockSession(data: {
+  matchId: number;
+  question: string;
+  user1Id: number;
+  user2Id: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(vibeLockSessions).values({
+    matchId: data.matchId,
+    question: data.question,
+    user1Id: data.user1Id,
+    user2Id: data.user2Id,
+    completed: false,
+  });
+
+  // Get the created session
+  const result = await db.select()
+    .from(vibeLockSessions)
+    .where(eq(vibeLockSessions.matchId, data.matchId))
+    .orderBy(desc(vibeLockSessions.createdAt))
+    .limit(1);
+
+  return result[0];
+}
+
+export async function updateVibeLockAnswer(data: {
+  sessionId: number;
+  isUser1: boolean;
+  answer: string;
+  score: number | null;
+  completed: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const updateData: Record<string, unknown> = {
+    updatedAt: new Date(),
+  };
+
+  if (data.isUser1) {
+    updateData.user1Answer = data.answer;
+  } else {
+    updateData.user2Answer = data.answer;
+  }
+
+  if (data.score !== null) {
+    updateData.score = data.score;
+  }
+  if (data.completed) {
+    updateData.completed = true;
+  }
+
+  await db.update(vibeLockSessions)
+    .set(updateData)
+    .where(eq(vibeLockSessions.id, data.sessionId));
+
+  // Return updated session
+  const result = await db.select()
+    .from(vibeLockSessions)
+    .where(eq(vibeLockSessions.id, data.sessionId))
+    .limit(1);
+
+  return result[0];
+}
+
+export async function unlockVibeLockChat(matchId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(matches)
+    .set({ vibeLockUnlocked: true })
+    .where(eq(matches.id, matchId));
+}
+
+export async function getMatchById(matchId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select()
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+// ============= Emotional Permissions Helpers =============
+
+export async function createEmotionalPermission(data: {
+  userId: number;
+  permissionType: 'stay_longer' | 'return_once' | 'private_signal' | 'unlock_tonight' | 'deeper_access';
+  price: number;
+  expiresAt?: Date | null;
+  targetModeId?: string;
+  targetUserId?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(emotionalPermissions).values({
+    userId: data.userId,
+    permissionType: data.permissionType,
+    price: data.price,
+    expiresAt: data.expiresAt,
+    targetModeId: data.targetModeId,
+    targetUserId: data.targetUserId,
+    status: 'active',
+  });
+
+  // Get the created permission
+  const result = await db.select()
+    .from(emotionalPermissions)
+    .where(eq(emotionalPermissions.userId, data.userId))
+    .orderBy(desc(emotionalPermissions.createdAt))
+    .limit(1);
+
+  return result[0];
+}
+
+export async function getUserPermissions(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  
+  return db.select()
+    .from(emotionalPermissions)
+    .where(and(
+      eq(emotionalPermissions.userId, userId),
+      eq(emotionalPermissions.status, 'active'),
+      sql`(${emotionalPermissions.expiresAt} IS NULL OR ${emotionalPermissions.expiresAt} > ${now})`
+    ))
+    .orderBy(desc(emotionalPermissions.createdAt));
+}
+
+export async function hasActivePermission(
+  userId: number, 
+  permissionType: 'stay_longer' | 'return_once' | 'private_signal' | 'unlock_tonight' | 'deeper_access'
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const now = new Date();
+  
+  const result = await db.select()
+    .from(emotionalPermissions)
+    .where(and(
+      eq(emotionalPermissions.userId, userId),
+      eq(emotionalPermissions.permissionType, permissionType),
+      eq(emotionalPermissions.status, 'active'),
+      sql`(${emotionalPermissions.expiresAt} IS NULL OR ${emotionalPermissions.expiresAt} > ${now})`
+    ))
+    .limit(1);
+
+  return result.length > 0;
+}
+
+export async function usePermission(permissionId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(emotionalPermissions)
+    .set({ 
+      status: 'used',
+      usedAt: new Date(),
+    })
+    .where(eq(emotionalPermissions.id, permissionId));
+}

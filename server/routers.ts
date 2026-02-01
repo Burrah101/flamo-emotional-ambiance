@@ -808,6 +808,185 @@ Respond with ONLY a JSON object in this exact format:
       }),
   }),
 
+  // ============= VibeLock Routes =============
+  vibeLock: router({
+    // Get or create VibeLock session for a match
+    getSession: protectedProcedure
+      .input(z.object({ matchId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Get existing session
+        let session = await db.getVibeLockSession(input.matchId);
+        
+        if (!session || session.completed) {
+          // Create new session with random question
+          const questions = [
+            "What would we do if we got lost in Bangkok at 2am?",
+            "Pick the playlist for tonight: Chill, Chaos, or Cosmic?",
+            "Which of us would survive a sunrise party better?",
+            "Who's more likely to end up dancing on a table?",
+            "If we found a secret rooftop at 3am, who suggests staying?",
+            "Who picks the after-party spot?",
+            "Who's the first to suggest 'one more drink'?",
+            "Who would win at karaoke?",
+            "Who's more likely to make friends with strangers?",
+            "Who would remember the night better?",
+          ];
+          const question = questions[Math.floor(Math.random() * questions.length)];
+          
+          // Get match to determine user IDs
+          const match = await db.getMatchById(input.matchId);
+          if (!match) {
+            throw new Error('Match not found');
+          }
+          
+          const user1Id = match.fromUserId;
+          const user2Id = match.toUserId;
+          
+          session = await db.createVibeLockSession({
+            matchId: input.matchId,
+            question,
+            user1Id,
+            user2Id,
+          });
+        }
+        
+        return session;
+      }),
+
+    // Submit answer to VibeLock
+    submitAnswer: protectedProcedure
+      .input(z.object({
+        sessionId: z.number(),
+        answer: z.enum(['You', 'Them']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await db.getVibeLockSessionById(input.sessionId);
+        if (!session) {
+          throw new Error('Session not found');
+        }
+        
+        const isUser1 = session.user1Id === ctx.user.id;
+        const otherAnswer = isUser1 ? session.user2Answer : session.user1Answer;
+        
+        let score: number | null = null;
+        let completed = false;
+        
+        // If other user has answered, calculate score
+        if (otherAnswer) {
+          // Same answer = high compatibility
+          if (input.answer === otherAnswer) {
+            score = Math.floor(Math.random() * 15) + 85; // 85-100
+          } else {
+            score = Math.floor(Math.random() * 20) + 60; // 60-80
+          }
+          completed = true;
+          
+          // Unlock chat if score is good
+          if (score >= 70) {
+            await db.unlockVibeLockChat(session.matchId);
+          }
+        }
+        
+        const updated = await db.updateVibeLockAnswer({
+          sessionId: input.sessionId,
+          isUser1,
+          answer: input.answer,
+          score,
+          completed,
+        });
+        
+        return updated;
+      }),
+  }),
+
+  // ============= Emotional Permissions Routes =============
+  permissions: router({
+    // Purchase an emotional permission
+    purchase: protectedProcedure
+      .input(z.object({
+        permissionType: z.enum(['stay_longer', 'return_once', 'private_signal', 'unlock_tonight', 'deeper_access']),
+        targetModeId: z.string().optional(),
+        targetUserId: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Price mapping
+        const prices: Record<string, number> = {
+          stay_longer: 299,
+          return_once: 199,
+          private_signal: 99,
+          unlock_tonight: 499,
+          deeper_access: 699,
+        };
+        
+        const price = prices[input.permissionType];
+        
+        // Calculate expiration
+        let expiresAt: Date | null = null;
+        const now = new Date();
+        
+        switch (input.permissionType) {
+          case 'stay_longer':
+            expiresAt = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours
+            break;
+          case 'unlock_tonight':
+            // Until 6am next day
+            expiresAt = new Date(now);
+            expiresAt.setHours(6, 0, 0, 0);
+            if (expiresAt <= now) {
+              expiresAt.setDate(expiresAt.getDate() + 1);
+            }
+            break;
+          case 'deeper_access':
+            // Monthly
+            expiresAt = new Date(now);
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+            break;
+        }
+        
+        // Create permission record
+        const permission = await db.createEmotionalPermission({
+          userId: ctx.user.id,
+          permissionType: input.permissionType,
+          price,
+          expiresAt,
+          targetModeId: input.targetModeId,
+          targetUserId: input.targetUserId,
+        });
+        
+        // Notify owner
+        await notifyOwner({
+          title: 'Emotional Permission Purchased',
+          content: `User ${ctx.user.name || ctx.user.openId} purchased ${input.permissionType} for $${(price / 100).toFixed(2)}`,
+        });
+        
+        return { success: true, permission };
+      }),
+
+    // Get user's active permissions
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const permissions = await db.getUserPermissions(ctx.user.id);
+      return permissions;
+    }),
+
+    // Check if user has specific permission
+    check: protectedProcedure
+      .input(z.object({
+        permissionType: z.enum(['stay_longer', 'return_once', 'private_signal', 'unlock_tonight', 'deeper_access']),
+      }))
+      .query(async ({ ctx, input }) => {
+        const hasPermission = await db.hasActivePermission(ctx.user.id, input.permissionType);
+        return { hasPermission };
+      }),
+
+    // Use a permission (mark as used)
+    use: protectedProcedure
+      .input(z.object({ permissionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.usePermission(input.permissionId);
+        return { success: true };
+      }),
+  }),
+
   // ============= Owner Notification Routes =============
   notifications: router({
     // Send notification to owner (for critical events)

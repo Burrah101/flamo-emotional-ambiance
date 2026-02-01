@@ -203,3 +203,88 @@
 - [x] Hover: parallax depth effect
 - [x] Active: glow + tempo sync
 - [x] Never flashy, never sharp
+
+
+## SUPER APP UPGRADE - Fun & Modern Redesign
+
+### Visual System Overhaul
+- [x] Vibrant gradient backgrounds with playful color mixing
+- [x] Fun micro-interactions and bouncy hover effects
+- [x] Modern playful typography (Space Grotesk font)
+- [x] Animated illustrations and icons
+- [x] Confetti/particle effects for celebrations
+- [x] Smooth page transitions with personality
+
+### New Profile Flow (Minimal & Connected)
+- [x] Screen 1: Username picker ("What should we call you?")
+- [x] Screen 2: Mood selector (fun animated mode cards)
+- [x] Screen 3: Preference picker (Men/Women/Everyone/Just vibes)
+- [x] Screen 4: Photo upload (required for trust)
+- [x] Enhanced photo verification flow
+- [x] Cyan trust badge prominently displayed
+
+### VibeLock Feature (From uploaded version)
+- [x] Lock into same vibe with another user
+- [x] Real-time synchronized mode experience
+- [x] Visual connection indicator
+- [x] VibeLock invitation flow
+- [x] Limited free VibeLocks per day (schema ready)
+
+### Events System (From uploaded version)
+- [ ] Create mood-based gatherings
+- [ ] Event tags and categories
+- [ ] Join events near you
+- [ ] Event discovery feed
+
+### Emotional Permissions (New Monetization)
+- [x] "Stay Longer" - $2.99 (extend session)
+- [x] "Return Once" - $1.99 (bookmark moment)
+- [x] "Send a Private Signal" - $0.99 (glow notification)
+- [x] "Unlock Tonight" - $4.99 (intimate modes until sunrise)
+- [x] "Deeper Access" - $6.99/month (full belonging)
+- [x] Soft glow UI for permissions (no padlocks)
+- [x] Permission-based copy throughout
+
+### Fun Splash Screen
+- [x] Animated logo reveal
+- [x] Mood-shifting background (particles + glow orbs)
+- [x] Playful loading indicators (fire spinner)
+
+### Events System (From uploaded version)
+- [ ] Create mood-based gatherings
+- [ ] Event tags and categories
+- [ ] Join events near you
+- [ ] Event discovery feed
+
+
+## NIGHTLIFE DATING APP PIVOT 🔥
+
+### Visual System Overhaul - Nightlife Energy
+- [x] Dark backgrounds with fire orange/amber glows (like splash screen)
+- [x] Pulsing, dynamic animations that feel like a nightclub
+- [x] Bold, confident typography
+- [x] Particle effects and floating embers
+- [x] Gradient transitions from black to fire orange
+- [x] Exciting hover states with glow effects
+
+### Matching System - Free Photo Browsing
+- [x] Users can browse all profiles/photos for FREE
+- [x] Show profile cards with photos, name, age, mood
+- [x] Swipe-style discovery interface
+- [x] "Hot" indicator for popular profiles
+- [x] Distance/location display
+
+### Contact Access - Paid Monetization
+- [x] Contact/message access is PAID (not profiles)
+- [x] "Unlock Chat" - $1.99 per person
+- [x] "Unlimited Messages Tonight" - $4.99
+- [x] "VIP Access" - $9.99/month (unlimited messaging)
+- [ ] Show blurred message preview to entice payment
+- [ ] "Someone wants to connect" notifications
+
+### Updated Pages
+- [x] Home - Exciting nightlife landing with "Find Your Flame" CTA
+- [x] Discover - Swipe-style profile cards with fire theme
+- [ ] Profile View - Full photo gallery, blurred contact until paid
+- [x] Premium - VIP access with nightlife benefits
+- [ ] Messages - Show locked conversations until paid

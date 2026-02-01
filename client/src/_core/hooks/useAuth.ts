@@ -1,4 +1,4 @@
-import { getLoginUrl } from "@/const";
+import { getLoginUrl, isOAuthConfigured } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -9,8 +9,7 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
+  const { redirectOnUnauthenticated = false } = options ?? {};
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -51,6 +50,7 @@ export function useAuth(options?: UseAuthOptions) {
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
+      isOAuthConfigured: isOAuthConfigured(),
     };
   }, [
     meQuery.data,
@@ -65,12 +65,20 @@ export function useAuth(options?: UseAuthOptions) {
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
+    
+    // Only redirect if OAuth is configured
+    if (!isOAuthConfigured()) {
+      console.warn('[Auth] OAuth not configured, skipping redirect');
+      return;
+    }
+    
+    const redirectPath = getLoginUrl();
+    if (!redirectPath) return;
     if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    window.location.href = redirectPath;
   }, [
     redirectOnUnauthenticated,
-    redirectPath,
     logoutMutation.isPending,
     meQuery.isLoading,
     state.user,
@@ -80,5 +88,6 @@ export function useAuth(options?: UseAuthOptions) {
     ...state,
     refresh: () => meQuery.refetch(),
     logout,
+    getLoginUrl,
   };
 }

@@ -4,12 +4,23 @@
  */
 
 import Stripe from 'stripe';
-import { PRODUCTS, getMomentById, getSubscriptionProduct } from './products';
+import { getMomentById, getSubscriptionProduct } from './products';
 
-// Initialize Stripe with secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-});
+// Initialize Stripe with secret key (lazy initialization to handle missing key)
+let stripe: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+  if (!stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) {
+      throw new Error('Stripe is not configured. Please set up payment settings.');
+    }
+    stripe = new Stripe(key, {
+      apiVersion: '2025-12-15.acacia' as Stripe.LatestApiVersion,
+    });
+  }
+  return stripe;
+}
 
 interface CheckoutOptions {
   userId: number;
@@ -25,9 +36,10 @@ export async function createSubscriptionCheckout(
   type: 'monthly' | 'yearly',
   options: CheckoutOptions
 ): Promise<string> {
+  const stripeClient = getStripeClient();
   const product = getSubscriptionProduct(type);
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripeClient.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
     customer_email: options.userEmail,
@@ -70,13 +82,14 @@ export async function createMomentCheckout(
   momentId: string,
   options: CheckoutOptions
 ): Promise<string> {
+  const stripeClient = getStripeClient();
   const moment = getMomentById(momentId);
   
   if (!moment) {
     throw new Error(`Invalid moment ID: ${momentId}`);
   }
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripeClient.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
     customer_email: options.userEmail,
@@ -114,12 +127,24 @@ export async function createMomentCheckout(
  * Retrieve a checkout session by ID
  */
 export async function getCheckoutSession(sessionId: string) {
-  return stripe.checkout.sessions.retrieve(sessionId);
+  const stripeClient = getStripeClient();
+  return stripeClient.checkout.sessions.retrieve(sessionId);
 }
 
 /**
  * Get Stripe instance for webhook verification
  */
-export function getStripe() {
-  return stripe;
+export function getStripe(): Stripe | null {
+  try {
+    return getStripeClient();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if Stripe is configured
+ */
+export function isStripeConfigured(): boolean {
+  return !!process.env.STRIPE_SECRET_KEY;
 }

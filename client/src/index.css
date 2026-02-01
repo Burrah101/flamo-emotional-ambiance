@@ -3,6 +3,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Google Font - Playful but modern */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -40,136 +43,176 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* FLaMO Fun Color Palette */
+  --flamo-fire: #FF2B2B;
+  --flamo-orange: #FF6A00;
+  --flamo-sunset: #FF4500;
+  --flamo-gold: #FFB800;
+  --flamo-pink: #FF69B4;
+  --flamo-purple: #9B59B6;
+  --flamo-cyan: #00D4FF;
+  --flamo-mint: #00E5A0;
+  --flamo-blue: #4A90D9;
 }
 
-/* FLaMO CSS Variables - Refined System */
+/* FLaMO Super App - Fun & Modern Variables */
 :root {
-  /* Glass defaults - 18-22px blur, no borders */
+  /* Primary gradient - fire to sunset */
+  --flamo-gradient-primary: linear-gradient(135deg, #FF2B2B 0%, #FF6A00 50%, #FFB800 100%);
+  --flamo-gradient-cool: linear-gradient(135deg, #00D4FF 0%, #4A90D9 50%, #9B59B6 100%);
+  --flamo-gradient-romance: linear-gradient(135deg, #FF69B4 0%, #FF2B2B 50%, #FF6A00 100%);
+  --flamo-gradient-chill: linear-gradient(135deg, #00E5A0 0%, #00D4FF 50%, #4A90D9 100%);
+  
+  /* Glass - more vibrant */
   --flamo-glass-blur: 20px;
-  --flamo-glass-bg: oklch(0.12 0.02 250 / 0.06);
-  --flamo-glass-border: none; /* No borders - depth via shadow */
+  --flamo-glass-bg: rgba(15, 15, 20, 0.7);
+  --flamo-glass-border: rgba(255, 255, 255, 0.08);
   
-  /* Glow defaults */
-  --flamo-glow-color: oklch(0.60 0.10 250);
-  --flamo-glow-radius: 24px;
-  --flamo-glow-shadow: 0 4px 24px oklch(0.08 0.02 250 / 0.4), 0 0 24px oklch(0.60 0.10 250 / 0.2);
-  --flamo-inner-glow: inset 0 0 20px oklch(0.60 0.10 250 / 0.08);
+  /* Glow - fun and colorful */
+  --flamo-glow-color: #FF6A00;
+  --flamo-glow-shadow: 0 8px 32px rgba(255, 106, 0, 0.3), 0 0 60px rgba(255, 43, 43, 0.2);
   
-  /* Text defaults */
-  --flamo-text: oklch(0.92 0.02 250);
-  --flamo-text-muted: oklch(0.58 0.04 250);
+  /* Text */
+  --flamo-text: #FFFFFF;
+  --flamo-text-muted: rgba(255, 255, 255, 0.6);
   
-  /* Background - deeper, darker */
-  --flamo-bg-gradient: linear-gradient(135deg, oklch(0.08 0.02 250), oklch(0.05 0.02 280));
+  /* Background - deep with color hints */
+  --flamo-bg: #0A0A0F;
+  --flamo-bg-gradient: linear-gradient(180deg, #0A0A0F 0%, #0F0A15 50%, #0A0F15 100%);
   
-  /* Motion - sinusoidal */
-  --flamo-breathing-duration: 7s;
-  --flamo-easing: cubic-bezier(0.37, 0, 0.63, 1); /* Sinusoidal */
+  /* Motion */
+  --flamo-breathing-duration: 6s;
+  --flamo-bounce-easing: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --flamo-smooth-easing: cubic-bezier(0.4, 0, 0.2, 1);
   
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  --radius: 1rem;
+  --primary: #FF6A00;
+  --primary-foreground: #FFFFFF;
+  --background: #0A0A0F;
+  --foreground: #FFFFFF;
+  --card: rgba(20, 20, 30, 0.8);
+  --card-foreground: #FFFFFF;
+  --popover: rgba(15, 15, 25, 0.95);
+  --popover-foreground: #FFFFFF;
+  --secondary: rgba(255, 255, 255, 0.1);
+  --secondary-foreground: #FFFFFF;
+  --muted: rgba(255, 255, 255, 0.05);
+  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --accent: rgba(255, 106, 0, 0.2);
+  --accent-foreground: #FF6A00;
+  --destructive: #FF2B2B;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #FF6A00;
 }
 
 .dark {
-  --primary: oklch(0.65 0.15 250);
-  --primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-primary: oklch(0.60 0.12 250);
-  --sidebar-primary-foreground: oklch(0.98 0.01 250);
-  --background: oklch(0.08 0.02 280);
-  --foreground: oklch(0.92 0.02 250);
-  --card: oklch(0.12 0.02 280);
-  --card-foreground: oklch(0.92 0.02 250);
-  --popover: oklch(0.10 0.02 280);
-  --popover-foreground: oklch(0.92 0.02 250);
-  --secondary: oklch(0.20 0.03 280);
-  --secondary-foreground: oklch(0.90 0.02 250);
-  --muted: oklch(0.18 0.02 280);
-  --muted-foreground: oklch(0.60 0.04 250);
-  --accent: oklch(0.25 0.04 280);
-  --accent-foreground: oklch(0.92 0.02 250);
-  --destructive: oklch(0.55 0.20 25);
-  --destructive-foreground: oklch(0.98 0.01 25);
-  --border: oklch(0.25 0.03 280);
-  --input: oklch(0.20 0.02 280);
-  --ring: oklch(0.65 0.15 250);
-  --chart-1: oklch(0.65 0.15 165);
-  --chart-2: oklch(0.65 0.15 230);
-  --chart-3: oklch(0.55 0.18 280);
-  --chart-4: oklch(0.75 0.12 25);
-  --chart-5: oklch(0.60 0.12 180);
-  --sidebar: oklch(0.10 0.02 280);
-  --sidebar-foreground: oklch(0.92 0.02 250);
-  --sidebar-accent: oklch(0.18 0.03 280);
-  --sidebar-accent-foreground: oklch(0.92 0.02 250);
-  --sidebar-border: oklch(0.25 0.03 280);
-  --sidebar-ring: oklch(0.65 0.15 250);
+  --background: #0A0A0F;
+  --foreground: #FFFFFF;
 }
 
-/* FLaMO Animations */
+/* ============================================
+   FLaMO FUN ANIMATIONS
+   ============================================ */
+
+/* Bouncy entrance */
+@keyframes flamo-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(50px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-10px);
+  }
+  70% {
+    transform: scale(0.95) translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Wiggle for attention */
+@keyframes flamo-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+
+/* Pulse glow */
+@keyframes flamo-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.4), 0 0 40px rgba(255, 43, 43, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 106, 0, 0.6), 0 0 80px rgba(255, 43, 43, 0.4);
+  }
+}
+
+/* Float up and down */
+@keyframes flamo-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Shimmer effect */
+@keyframes flamo-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Gradient shift */
+@keyframes flamo-gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Confetti fall */
+@keyframes flamo-confetti {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Breathing */
 @keyframes flamo-breathing {
   0%, 100% {
     transform: scale(1);
-    opacity: 0.95;
+    opacity: 0.9;
   }
   50% {
-    transform: scale(1.02);
+    transform: scale(1.03);
     opacity: 1;
   }
 }
 
-@keyframes flamo-glow-pulse {
-  0%, 100% {
-    filter: brightness(0.9);
-  }
-  50% {
-    filter: brightness(1.1);
-  }
+/* Spin slow */
+@keyframes flamo-spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-@keyframes flamo-float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
+/* Pop */
+@keyframes flamo-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
-@keyframes flamo-fade-in {
+/* Slide up fade */
+@keyframes flamo-slide-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
@@ -177,16 +220,29 @@
   }
 }
 
-@keyframes flamo-scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
+/* Fire flicker */
+@keyframes flamo-fire-flicker {
+  0%, 100% { 
+    filter: brightness(1) saturate(1);
     transform: scale(1);
   }
+  25% { 
+    filter: brightness(1.1) saturate(1.1);
+    transform: scale(1.02);
+  }
+  50% { 
+    filter: brightness(0.95) saturate(0.95);
+    transform: scale(0.98);
+  }
+  75% { 
+    filter: brightness(1.05) saturate(1.05);
+    transform: scale(1.01);
+  }
 }
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
 
 @layer base {
   * {
@@ -200,53 +256,43 @@
   }
   
   body {
-    @apply bg-background text-foreground;
-    background: var(--flamo-bg-gradient);
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    background: var(--flamo-bg);
+    background-image: var(--flamo-bg-gradient);
+    color: var(--flamo-text);
     min-height: 100vh;
     overflow-x: hidden;
   }
   
-  :focus {
-    outline: none;
+  /* Fun gradient text */
+  .gradient-text {
+    background: var(--flamo-gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
-  :focus-visible {
-    outline: 2px solid var(--flamo-glow-color);
-    outline-offset: 2px;
-    border-radius: 8px;
-  }
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [type="button"]:not(:disabled),
-  [type="submit"]:not(:disabled),
-  [type="reset"]:not(:disabled),
-  a[href],
-  select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled) {
-    @apply cursor-pointer;
+  /* Animated gradient text */
+  .gradient-text-animated {
+    background: linear-gradient(90deg, #FF2B2B, #FF6A00, #FFB800, #FF6A00, #FF2B2B);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: flamo-gradient-shift 3s ease infinite;
   }
 }
 
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
+
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
   }
 
@@ -257,102 +303,188 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
 }
 
-/* FLaMO Utility Classes */
-.flamo-breathing {
-  animation: flamo-breathing var(--flamo-breathing-duration) var(--flamo-easing) infinite;
-}
+/* ============================================
+   FLAMO UTILITY CLASSES
+   ============================================ */
 
-.flamo-glow-pulse {
-  animation: flamo-glow-pulse var(--flamo-breathing-duration) var(--flamo-easing) infinite;
-}
-
-.flamo-float {
-  animation: flamo-float calc(var(--flamo-breathing-duration) * 0.8) var(--flamo-easing) infinite;
-}
-
-.flamo-fade-in {
-  animation: flamo-fade-in 0.5s var(--flamo-easing) forwards;
-}
-
-.flamo-scale-in {
-  animation: flamo-scale-in 0.4s var(--flamo-easing) forwards;
-}
-
-/* Glass morphism utilities - no borders, depth via shadow */
+/* Glass card - fun version */
 .flamo-glass {
   backdrop-filter: blur(var(--flamo-glass-blur));
   -webkit-backdrop-filter: blur(var(--flamo-glass-blur));
   background: var(--flamo-glass-bg);
-  border: none; /* No borders */
-  border-radius: 20px;
-  box-shadow: var(--flamo-glow-shadow), var(--flamo-inner-glow);
-  transition: all 0.4s var(--flamo-easing);
+  border: 1px solid var(--flamo-glass-border);
+  border-radius: 24px;
+  box-shadow: var(--flamo-glow-shadow);
+  transition: all 0.3s var(--flamo-smooth-easing);
 }
 
 .flamo-glass:hover {
-  box-shadow: 0 8px 40px oklch(0.08 0.02 250 / 0.5), 0 0 36px oklch(0.60 0.10 250 / 0.3), var(--flamo-inner-glow);
-  transform: translateY(-1px);
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 48px rgba(255, 106, 0, 0.4), 0 0 80px rgba(255, 43, 43, 0.3);
+  border-color: rgba(255, 106, 0, 0.3);
 }
 
+/* Glass subtle */
 .flamo-glass-subtle {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: oklch(0.10 0.02 250 / 0.04);
-  border: none; /* No borders */
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  box-shadow: 0 2px 12px oklch(0.05 0.02 250 / 0.3);
 }
 
-/* Text utilities */
-.flamo-text {
-  color: var(--flamo-text);
+/* Fun button */
+.flamo-btn {
+  background: var(--flamo-gradient-primary);
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s var(--flamo-bounce-easing);
+  box-shadow: 0 4px 20px rgba(255, 106, 0, 0.4);
 }
 
-.flamo-text-muted {
-  color: var(--flamo-text-muted);
+.flamo-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(255, 106, 0, 0.5);
 }
 
-.flamo-text-glow {
-  text-shadow: 0 0 20px var(--flamo-glow-color);
+.flamo-btn:active {
+  transform: translateY(0) scale(0.98);
 }
 
-/* Custom scrollbar */
+/* Animation utilities */
+.flamo-bounce-in {
+  animation: flamo-bounce-in 0.6s var(--flamo-bounce-easing) forwards;
+}
+
+.flamo-wiggle {
+  animation: flamo-wiggle 0.5s ease-in-out;
+}
+
+.flamo-pulse-glow {
+  animation: flamo-pulse-glow 2s ease-in-out infinite;
+}
+
+.flamo-float {
+  animation: flamo-float 3s ease-in-out infinite;
+}
+
+.flamo-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background-size: 200% 100%;
+  animation: flamo-shimmer 2s infinite;
+}
+
+.flamo-breathing {
+  animation: flamo-breathing var(--flamo-breathing-duration) ease-in-out infinite;
+}
+
+.flamo-spin-slow {
+  animation: flamo-spin-slow 8s linear infinite;
+}
+
+.flamo-pop {
+  animation: flamo-pop 0.3s var(--flamo-bounce-easing);
+}
+
+.flamo-slide-up {
+  animation: flamo-slide-up 0.5s var(--flamo-smooth-easing) forwards;
+}
+
+.flamo-fire-flicker {
+  animation: flamo-fire-flicker 2s ease-in-out infinite;
+}
+
+/* Staggered animations */
+.flamo-stagger-1 { animation-delay: 0.1s; }
+.flamo-stagger-2 { animation-delay: 0.2s; }
+.flamo-stagger-3 { animation-delay: 0.3s; }
+.flamo-stagger-4 { animation-delay: 0.4s; }
+.flamo-stagger-5 { animation-delay: 0.5s; }
+
+/* Gradient backgrounds */
+.bg-flamo-gradient {
+  background: var(--flamo-gradient-primary);
+}
+
+.bg-flamo-gradient-cool {
+  background: var(--flamo-gradient-cool);
+}
+
+.bg-flamo-gradient-romance {
+  background: var(--flamo-gradient-romance);
+}
+
+.bg-flamo-gradient-chill {
+  background: var(--flamo-gradient-chill);
+}
+
+/* Glow effects */
+.flamo-glow-fire {
+  box-shadow: 0 0 30px rgba(255, 43, 43, 0.5), 0 0 60px rgba(255, 106, 0, 0.3);
+}
+
+.flamo-glow-cyan {
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5), 0 0 60px rgba(74, 144, 217, 0.3);
+}
+
+.flamo-glow-pink {
+  box-shadow: 0 0 30px rgba(255, 105, 180, 0.5), 0 0 60px rgba(155, 89, 182, 0.3);
+}
+
+.flamo-glow-mint {
+  box-shadow: 0 0 30px rgba(0, 229, 160, 0.5), 0 0 60px rgba(0, 212, 255, 0.3);
+}
+
+/* Verification badge glow */
+.flamo-verified-glow {
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.6), 0 0 30px rgba(0, 212, 255, 0.3);
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR
+   ============================================ */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.30 0.03 250 / 0.5);
-  border-radius: 3px;
+  background: linear-gradient(180deg, #FF6A00, #FF2B2B);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.40 0.04 250 / 0.6);
+  background: linear-gradient(180deg, #FF8533, #FF4444);
 }
 
 /* Selection */
 ::selection {
-  background: oklch(0.60 0.15 250 / 0.3);
-  color: oklch(0.95 0.02 250);
+  background: rgba(255, 106, 0, 0.3);
+  color: white;
 }
 
 /* Safe area padding for mobile */
@@ -381,4 +513,26 @@
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* Confetti animation class */
+.animate-confetti {
+  animation: flamo-confetti linear forwards;
+}
+
+/* Fade in animation */
+.animate-fade-in {
+  animation: flamo-slide-up 0.8s ease-out forwards;
+}
+
+/* Fire spinner */
+.flamo-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid transparent;
+  border-top-color: #FF2B2B;
+  border-right-color: #FF4500;
+  border-bottom-color: #FF6A00;
+  border-radius: 50%;
+  animation: flamo-spin-slow 1s linear infinite;
 }

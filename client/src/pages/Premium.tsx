@@ -1,18 +1,13 @@
 /**
- * FLaMO Premium Screen
- * Subscription and one-time purchases with Stripe integration.
+ * FLaMO Premium/VIP Screen - Nightlife Dating
+ * Unlock chat access, VIP features, and special perks
  */
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useSearch } from 'wouter';
-import { useModeStore } from '../state/modeStore';
 import { useUserStore } from '../state/userStore';
-import { getPremiumModes, ONE_TIME_MOMENTS } from '../core/modeDefinitions';
 import { FLAMO_CONFIG } from '../core/flamoConfig';
-import { AmbientGlow } from '../components/AmbientGlow';
-import { GlassCard } from '../components/GlassCard';
-import { GlassButton } from '../components/GlassButton';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { trpc } from '@/lib/trpc';
@@ -23,55 +18,87 @@ import {
   Check, 
   Sparkles,
   Heart,
-  Users,
-  Volume2,
+  MessageCircle,
+  Zap,
   Clock,
   CreditCard,
-  Loader2
+  Loader2,
+  Flame,
+  Star,
+  Eye,
+  Send,
+  Infinity,
+  Shield
 } from 'lucide-react';
+
+// Floating embers background
+function FloatingEmbers() {
+  const [embers, setEmbers] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
+  
+  useEffect(() => {
+    const newEmbers = Array.from({ length: 15 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 3 + 1,
+      delay: Math.random() * 5,
+    }));
+    setEmbers(newEmbers);
+  }, []);
+  
+  return (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      {embers.map((ember) => (
+        <motion.div
+          key={ember.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${ember.x}%`,
+            top: `${ember.y}%`,
+            width: ember.size,
+            height: ember.size,
+            background: `radial-gradient(circle, rgba(255,106,0,0.6) 0%, transparent 100%)`,
+          }}
+          animate={{
+            y: [0, -20, 0],
+            opacity: [0.2, 0.5, 0.2],
+          }}
+          transition={{
+            duration: 3 + Math.random() * 2,
+            delay: ember.delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function Premium() {
   const [, navigate] = useLocation();
   const searchString = useSearch();
-  const [selectedMoment, setSelectedMoment] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   
   const { isAuthenticated, user } = useAuth();
   
   const isPremium = useUserStore(state => state.isPremium);
   const setPremium = useUserStore(state => state.setPremium);
-  const addPurchasedMoment = useUserStore(state => state.addPurchasedMoment);
-  
-  const premiumModes = getPremiumModes();
   
   // Stripe mutations
   const subscriptionCheckout = trpc.stripe.createSubscriptionCheckout.useMutation();
-  const momentCheckout = trpc.stripe.createMomentCheckout.useMutation();
   
   // Check for success/cancel from Stripe redirect
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     
     if (params.get('success') === 'true') {
-      // Subscription successful
       const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
       setPremium(true, expiresAt);
-      toast.success('Welcome to Premium!', {
-        description: 'You now have access to all premium features.',
+      toast.success('🔥 Welcome to VIP!', {
+        description: 'You now have unlimited messaging access.',
       });
-      // Clean URL
-      navigate('/premium', { replace: true });
-    } else if (params.get('moment_success') === 'true') {
-      // Moment purchase successful
-      const momentId = params.get('moment_id');
-      const moment = ONE_TIME_MOMENTS.find(m => m.id === momentId);
-      if (moment) {
-        addPurchasedMoment(momentId!, moment.durationHours);
-        toast.success(`${moment.name} unlocked!`, {
-          description: `Available for ${moment.durationHours} hours.`,
-        });
-      }
       navigate('/premium', { replace: true });
     } else if (params.get('canceled') === 'true') {
       toast.info('Payment canceled', {
@@ -81,24 +108,17 @@ export default function Premium() {
     }
   }, [searchString]);
   
-  const premiumFeatures = [
-    { icon: Heart, label: 'Romance, Bond & Afterglow modes' },
-    { icon: Users, label: 'Shared presence with anyone' },
-    { icon: Volume2, label: 'Ambient sync with environment' },
-    { icon: Clock, label: 'Mode scheduling' },
-    { icon: Sparkles, label: 'Custom glow intensity' },
-  ];
-  
-  const handleSubscribe = async () => {
+  const handlePurchase = async (planType: string) => {
     if (!isAuthenticated) {
       window.location.href = getLoginUrl();
       return;
     }
     
     setIsProcessing(true);
+    setSelectedPlan(planType);
     
     try {
-      const result = await subscriptionCheckout.mutateAsync({ type: billingCycle });
+      const result = await subscriptionCheckout.mutateAsync({ type: planType === 'vip' ? 'monthly' : 'monthly' });
       
       if (result.checkoutUrl) {
         toast.info('Redirecting to checkout...', {
@@ -112,258 +132,258 @@ export default function Premium() {
       });
     } finally {
       setIsProcessing(false);
+      setSelectedPlan(null);
     }
   };
   
-  const handlePurchaseMoment = async (momentId: string) => {
-    if (!isAuthenticated) {
-      window.location.href = getLoginUrl();
-      return;
-    }
-    
-    const moment = ONE_TIME_MOMENTS.find(m => m.id === momentId);
-    if (!moment) return;
-    
-    setIsProcessing(true);
-    setSelectedMoment(momentId);
-    
-    try {
-      const result = await momentCheckout.mutateAsync({ momentId: `moment_${momentId}` });
-      
-      if (result.checkoutUrl) {
-        toast.info('Redirecting to checkout...', {
-          description: 'You will be taken to Stripe to complete payment.',
-        });
-        window.open(result.checkoutUrl, '_blank');
-      }
-    } catch (error) {
-      toast.error('Purchase failed', {
-        description: 'Please try again.',
-      });
-    } finally {
-      setIsProcessing(false);
-      setSelectedMoment(null);
-    }
-  };
+  const plans = [
+    {
+      id: 'single',
+      name: 'Unlock One Chat',
+      description: 'Message one person',
+      price: 1.99,
+      icon: MessageCircle,
+      color: 'from-orange-500 to-red-500',
+      borderColor: 'border-orange-500/30',
+      features: ['Send unlimited messages to 1 person', 'See if they\'re online', 'Photo sharing'],
+    },
+    {
+      id: 'tonight',
+      name: 'Unlimited Tonight',
+      description: 'Message anyone until sunrise',
+      price: 4.99,
+      icon: Zap,
+      color: 'from-purple-500 to-pink-500',
+      borderColor: 'border-purple-500/30',
+      features: ['Unlimited messaging until 6 AM', 'See who viewed your profile', 'Priority in discover'],
+      popular: true,
+    },
+    {
+      id: 'vip',
+      name: 'VIP Access',
+      description: 'Unlimited everything, forever',
+      price: 9.99,
+      priceLabel: '/month',
+      icon: Crown,
+      color: 'from-yellow-500 to-orange-500',
+      borderColor: 'border-yellow-500/30',
+      features: [
+        'Unlimited messaging forever',
+        'See who liked you',
+        'Appear first in discover',
+        'Exclusive VIP badge',
+        'Undo swipes',
+        'Ad-free experience',
+      ],
+      bestValue: true,
+    },
+  ];
   
-  const monthlyPrice = FLAMO_CONFIG.pricing.premium.monthly;
-  const yearlyPrice = 59.99;
-  const yearlySavings = Math.round((1 - (yearlyPrice / (monthlyPrice * 12))) * 100);
+  const boosts = [
+    {
+      id: 'boost',
+      name: 'Profile Boost',
+      description: 'Get 10x more views for 30 minutes',
+      price: 2.99,
+      icon: Flame,
+    },
+    {
+      id: 'superlike',
+      name: 'Super Likes (5)',
+      description: 'Stand out from the crowd',
+      price: 4.99,
+      icon: Star,
+    },
+    {
+      id: 'incognito',
+      name: 'Incognito Mode',
+      description: 'Browse without being seen',
+      price: 1.99,
+      icon: Eye,
+    },
+  ];
   
   return (
-    <div className="min-h-screen relative">
-      <AmbientGlow />
+    <div className="min-h-screen bg-[#0a0a0f] relative overflow-hidden">
+      <FloatingEmbers />
+      
+      {/* Fire glow */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full opacity-30 pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(ellipse, rgba(255,106,0,0.3) 0%, transparent 70%)',
+        }}
+      />
       
       <div className="relative z-10 min-h-screen safe-top safe-bottom">
         {/* Header */}
         <header className="px-6 pt-6 pb-4">
           <div className="flex items-center gap-4">
             <motion.button
-              className="w-10 h-10 rounded-full flamo-glass-subtle flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center"
               onClick={() => navigate('/')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <ArrowLeft className="w-5 h-5 flamo-text" />
+              <ArrowLeft className="w-5 h-5 text-white" />
             </motion.button>
             <div>
-              <h1 className="text-xl font-medium flamo-text">Premium</h1>
-              <p className="text-sm flamo-text-muted">Unlock deeper experiences</p>
+              <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                <Crown className="w-5 h-5 text-yellow-500" />
+                Go VIP
+              </h1>
+              <p className="text-sm text-white/50">Unlock the full experience</p>
             </div>
           </div>
         </header>
         
         <main className="px-6 pb-8 overflow-y-auto">
-          {/* Premium subscription card */}
-          {!isPremium && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.37, 0, 0.63, 1] }}
-            >
-              <GlassCard className="p-6 mb-8" breathing>
-                <div className="flex items-center gap-3 mb-4">
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center"
-                    style={{
-                      background: 'linear-gradient(135deg, oklch(0.75 0.12 45 / 0.3), oklch(0.65 0.15 25 / 0.3))',
-                    }}
-                  >
-                    <Crown className="w-6 h-6" style={{ color: 'oklch(0.85 0.15 45)' }} />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-medium flamo-text">FLaMO Premium</h2>
-                    <p className="text-sm flamo-text-muted">
-                      Unlock all premium features
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Billing cycle toggle */}
-                <div className="flex gap-2 mb-6 p-1 rounded-xl flamo-glass-subtle">
-                  <button
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                      billingCycle === 'monthly' 
-                        ? 'flamo-glass flamo-text' 
-                        : 'flamo-text-muted hover:flamo-text'
-                    }`}
-                    onClick={() => setBillingCycle('monthly')}
-                  >
-                    Monthly
-                  </button>
-                  <button
-                    className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all relative ${
-                      billingCycle === 'yearly' 
-                        ? 'flamo-glass flamo-text' 
-                        : 'flamo-text-muted hover:flamo-text'
-                    }`}
-                    onClick={() => setBillingCycle('yearly')}
-                  >
-                    Yearly
-                    <span className="absolute -top-2 -right-2 px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400">
-                      Save {yearlySavings}%
-                    </span>
-                  </button>
-                </div>
-                
-                {/* Price display */}
-                <div className="text-center mb-6">
-                  <div className="text-3xl font-bold flamo-text">
-                    ${billingCycle === 'monthly' ? monthlyPrice : yearlyPrice}
-                    <span className="text-base font-normal flamo-text-muted">
-                      /{billingCycle === 'monthly' ? 'month' : 'year'}
-                    </span>
-                  </div>
-                  {billingCycle === 'yearly' && (
-                    <p className="text-sm text-green-400 mt-1">
-                      That's just ${(yearlyPrice / 12).toFixed(2)}/month
-                    </p>
-                  )}
-                </div>
-                
-                {/* Features */}
-                <div className="space-y-3 mb-6">
-                  {premiumFeatures.map((feature, index) => (
-                    <motion.div
-                      key={feature.label}
-                      className="flex items-center gap-3"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <div className="w-8 h-8 rounded-full flamo-glass-subtle flex items-center justify-center">
-                        <feature.icon className="w-4 h-4 flamo-text-muted" />
-                      </div>
-                      <span className="text-sm flamo-text">{feature.label}</span>
-                    </motion.div>
-                  ))}
-                </div>
-                
-                {/* Subscribe button */}
-                <GlassButton
-                  onClick={handleSubscribe}
-                  disabled={isProcessing}
-                  className="w-full py-4"
-                  icon={isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-                >
-                  {isProcessing ? 'Processing...' : `Subscribe for $${billingCycle === 'monthly' ? monthlyPrice : yearlyPrice}/${billingCycle === 'monthly' ? 'mo' : 'yr'}`}
-                </GlassButton>
-                
-                <p className="text-xs text-center flamo-text-muted mt-4">
-                  Secure payment via Stripe. Cancel anytime.
-                </p>
-              </GlassCard>
-            </motion.div>
-          )}
-          
-          {/* Already premium */}
+          {/* Already VIP */}
           {isPremium && (
             <motion.div
+              className="p-6 rounded-3xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 text-center mb-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <GlassCard className="p-6 mb-8 text-center">
-                <Crown className="w-12 h-12 mx-auto mb-4" style={{ color: 'oklch(0.85 0.15 45)' }} />
-                <h2 className="text-lg font-medium flamo-text mb-2">You're Premium!</h2>
-                <p className="text-sm flamo-text-muted">
-                  Enjoy all premium features and modes.
-                </p>
-              </GlassCard>
+              <Crown className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
+              <h2 className="text-2xl font-bold text-white mb-2">You're VIP! 🔥</h2>
+              <p className="text-white/60">
+                Enjoy unlimited messaging and all premium features.
+              </p>
             </motion.div>
           )}
           
-          {/* Premium modes preview */}
-          <section className="mb-8">
-            <h3 className="text-lg font-medium flamo-text mb-4">Premium Modes</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {premiumModes.map((mode) => (
+          {/* Pricing plans */}
+          {!isPremium && (
+            <div className="space-y-4 mb-8">
+              {plans.map((plan, index) => (
                 <motion.div
-                  key={mode.id}
-                  className="aspect-square rounded-2xl flamo-glass-subtle p-3 flex flex-col items-center justify-center text-center"
-                  whileHover={{ scale: 1.02 }}
-                  style={{
-                    background: `linear-gradient(135deg, ${mode.colorProfile.base}20, ${mode.colorProfile.glow}10)`,
-                  }}
-                >
-                  <div 
-                    className="w-10 h-10 rounded-full mb-2 flex items-center justify-center"
-                    style={{ background: `${mode.colorProfile.base}30` }}
-                  >
-                    <Sparkles className="w-5 h-5" style={{ color: mode.colorProfile.base }} />
-                  </div>
-                  <span className="text-xs font-medium flamo-text">{mode.name}</span>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-          
-          {/* One-time moments */}
-          <section>
-            <h3 className="text-lg font-medium flamo-text mb-2">Special Moments</h3>
-            <p className="text-sm flamo-text-muted mb-4">
-              One-time unlocks for special occasions
-            </p>
-            
-            <div className="space-y-3">
-              {ONE_TIME_MOMENTS.map((moment) => (
-                <motion.div
-                  key={moment.id}
-                  initial={{ opacity: 0, y: 10 }}
+                  key={plan.id}
+                  className={`relative p-5 rounded-2xl bg-gradient-to-br ${plan.color.replace('from-', 'from-').replace('to-', 'to-')}/10 ${plan.borderColor} border overflow-hidden`}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ scale: 1.01 }}
                 >
-                  <GlassCard className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium flamo-text">{moment.name}</h4>
-                        <p className="text-xs flamo-text-muted">
-                          {moment.durationHours}h access • ${moment.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <GlassButton
-                        onClick={() => handlePurchaseMoment(moment.id)}
-                        disabled={isProcessing && selectedMoment === moment.id}
-                        className="px-4 py-2 text-sm"
-                        icon={isProcessing && selectedMoment === moment.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <CreditCard className="w-4 h-4" />
-                        )}
-                      >
-                        {isProcessing && selectedMoment === moment.id ? '...' : 'Buy'}
-                      </GlassButton>
+                  {/* Best value badge */}
+                  {plan.bestValue && (
+                    <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-bl-xl">
+                      BEST VALUE
                     </div>
-                  </GlassCard>
+                  )}
+                  
+                  {/* Popular badge */}
+                  {plan.popular && (
+                    <div className="absolute top-0 right-0 px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-bl-xl">
+                      POPULAR
+                    </div>
+                  )}
+                  
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
+                      <plan.icon className="w-6 h-6 text-white" />
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                        <span className="text-xl font-bold text-white">
+                          ${plan.price}
+                          {plan.priceLabel && <span className="text-sm text-white/50">{plan.priceLabel}</span>}
+                        </span>
+                      </div>
+                      <p className="text-white/50 text-sm mb-3">{plan.description}</p>
+                      
+                      {/* Features */}
+                      <div className="space-y-1.5 mb-4">
+                        {plan.features.map((feature) => (
+                          <div key={feature} className="flex items-center gap-2 text-sm text-white/70">
+                            <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            {feature}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <motion.button
+                        className={`w-full py-3 rounded-xl bg-gradient-to-r ${plan.color} text-white font-semibold flex items-center justify-center gap-2`}
+                        onClick={() => handlePurchase(plan.id)}
+                        disabled={isProcessing}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isProcessing && selectedPlan === plan.id ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <>
+                            <CreditCard className="w-4 h-4" />
+                            Get {plan.name}
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </div>
-          </section>
+          )}
           
-          {/* Test card info */}
-          <div className="mt-8 p-4 rounded-xl flamo-glass-subtle">
-            <p className="text-xs text-center flamo-text-muted">
-              <strong>Test Mode:</strong> Use card 4242 4242 4242 4242 with any future expiry and CVC.
-            </p>
-          </div>
+          {/* Boosts section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              Power-Ups
+            </h2>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {boosts.map((boost) => (
+                <motion.button
+                  key={boost.id}
+                  className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center"
+                  onClick={() => toast.info(`${boost.name} coming soon!`)}
+                  whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.2)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <boost.icon className="w-8 h-8 mx-auto mb-2 text-orange-400" />
+                  <p className="text-white text-sm font-medium mb-1">{boost.name}</p>
+                  <p className="text-orange-400 font-bold">${boost.price}</p>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+          
+          {/* Trust badges */}
+          <motion.div
+            className="mt-8 flex items-center justify-center gap-6 text-white/40 text-xs"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            <div className="flex items-center gap-1">
+              <Shield className="w-4 h-4" />
+              Secure Payment
+            </div>
+            <div className="flex items-center gap-1">
+              <CreditCard className="w-4 h-4" />
+              Stripe
+            </div>
+            <div className="flex items-center gap-1">
+              <Check className="w-4 h-4" />
+              Cancel Anytime
+            </div>
+          </motion.div>
+          
+          {/* Test mode notice */}
+          <motion.p
+            className="text-center text-white/30 text-xs mt-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+          >
+            <strong>Test Mode:</strong> Use card 4242 4242 4242 4242 with any future expiry and CVC.
+          </motion.p>
         </main>
       </div>
     </div>
