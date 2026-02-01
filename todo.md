@@ -288,3 +288,33 @@
 - [ ] Profile View - Full photo gallery, blurred contact until paid
 - [x] Premium - VIP access with nightlife benefits
 - [ ] Messages - Show locked conversations until paid
+
+
+## REAL-TIME MAP INTEGRATION
+
+### Map View Feature
+- [x] Create NightlifeMap page with list view (fallback for map)
+- [x] Display nearby nightlife venues (clubs, bars, lounges)
+- [x] Show nearby users with mood/status
+- [x] Custom fire-themed venue cards
+- [x] User avatar cards showing mood/status
+- [x] Venue info cards with name, type, distance, crowd level
+- [x] Filter by venue type (clubs, bars, lounges)
+- [x] "Hot spots" indicator for popular locations
+- [x] Integration with existing fiery nightlife theme
+- [x] Add map navigation to home page
+
+
+## REAL-TIME CHAT ON MAP (COMPLETED)
+
+### Chat Feature Integration
+- [x] Create MapChat component with real-time messaging
+- [x] "Send Spark" button initiates chat from user card
+- [x] Chat modal/drawer slides up from bottom
+- [x] Real-time message delivery via WebSocket
+- [x] Typing indicators
+- [x] Message timestamps
+- [x] Paid contact access integration (unlock to chat)
+- [x] Chat history persistence
+- [x] Online/offline status in chat
+- [x] Fiery nightlife theme for chat UI

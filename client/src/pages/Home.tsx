@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Flame, Heart, Sparkles, MapPin, Crown, MessageCircle, Users, Zap, Star } from 'lucide-react';
+import { Flame, Heart, Sparkles, MapPin, Crown, MessageCircle, Users, Zap, Star, Map } from 'lucide-react';
 
 // Floating ember particle component
 function FloatingEmbers() {
@@ -386,16 +386,16 @@ export default function Home() {
               <p className="text-white/50 text-xs mt-1">Find the vibe</p>
             </motion.button>
             
-            {/* Nearby */}
+            {/* Nightlife Map */}
             <motion.button
               className="p-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20 text-left"
-              onClick={() => navigate('/nearby')}
+              onClick={() => navigate('/map')}
               whileHover={{ scale: 1.02, borderColor: 'rgba(6,182,212,0.5)' }}
               whileTap={{ scale: 0.98 }}
             >
-              <MapPin className="w-8 h-8 text-cyan-500 mb-2" />
-              <h4 className="text-white font-semibold">Who's Nearby</h4>
-              <p className="text-white/50 text-xs mt-1">Real-time radar</p>
+              <Map className="w-8 h-8 text-cyan-500 mb-2" />
+              <h4 className="text-white font-semibold">Nightlife Map</h4>
+              <p className="text-white/50 text-xs mt-1">Venues & people nearby</p>
             </motion.button>
             
             {/* VibeLock */}

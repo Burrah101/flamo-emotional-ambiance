@@ -27,6 +27,7 @@ import Matches from "./pages/Matches";
 import Chat from "./pages/Chat";
 import SplashScreen from "./pages/SplashScreen";
 import ProfileSetup from "./pages/ProfileSetup";
+import NightlifeMap from "./pages/NightlifeMap";
 
 // Wrapper component to handle onboarding redirect
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -103,6 +104,11 @@ function Router() {
       <Route path="/chat/:matchId">
         <OnboardingGuard>
           <Chat />
+        </OnboardingGuard>
+      </Route>
+      <Route path="/map">
+        <OnboardingGuard>
+          <NightlifeMap />
         </OnboardingGuard>
       </Route>
       
