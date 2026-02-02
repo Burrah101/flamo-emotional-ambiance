@@ -8,7 +8,7 @@ import { notifyOwner } from "./_core/notification";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
 import { storagePut } from "./storage";
-import { createSubscriptionCheckout, createMomentCheckout } from "./stripe/checkout";
+import { createSubscriptionCheckout, createMomentCheckout, createOneTimeCheckout, createPowerUpCheckout } from "./stripe/checkout";
 
 export const appRouter = router({
   system: systemRouter,
@@ -771,7 +771,7 @@ Respond with ONLY a JSON object in this exact format:
 
   // ============= Stripe Payment Routes =============
   stripe: router({
-    // Create subscription checkout session
+    // Create VIP subscription checkout session
     createSubscriptionCheckout: protectedProcedure
       .input(z.object({
         type: z.enum(['monthly', 'yearly']),
@@ -789,7 +789,45 @@ Respond with ONLY a JSON object in this exact format:
         return { checkoutUrl };
       }),
 
-    // Create moment purchase checkout session
+    // Create one-time purchase checkout (single chat unlock, unlimited tonight)
+    createOneTimeCheckout: protectedProcedure
+      .input(z.object({
+        productId: z.enum(['single_chat', 'unlimited_tonight']),
+        targetUserId: z.number().optional(), // Required for single_chat
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const origin = ctx.req.headers.origin || 'http://localhost:3000';
+        
+        const checkoutUrl = await createOneTimeCheckout(input.productId, {
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || '',
+          userName: ctx.user.name || undefined,
+          origin,
+          targetUserId: input.targetUserId,
+        });
+
+        return { checkoutUrl };
+      }),
+
+    // Create power-up purchase checkout (boost, super likes, incognito)
+    createPowerUpCheckout: protectedProcedure
+      .input(z.object({
+        productId: z.enum(['profile_boost', 'super_likes', 'incognito']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const origin = ctx.req.headers.origin || 'http://localhost:3000';
+        
+        const checkoutUrl = await createPowerUpCheckout(input.productId, {
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || '',
+          userName: ctx.user.name || undefined,
+          origin,
+        });
+
+        return { checkoutUrl };
+      }),
+
+    // Create moment purchase checkout session (legacy)
     createMomentCheckout: protectedProcedure
       .input(z.object({
         momentId: z.string(),
@@ -805,6 +843,29 @@ Respond with ONLY a JSON object in this exact format:
         });
 
         return { checkoutUrl };
+      }),
+
+    // Check user's premium access status
+    checkAccess: protectedProcedure.query(async ({ ctx }) => {
+      const premiumStatus = await db.hasPremiumAccess(ctx.user.id);
+      const superLikes = await db.getSuperLikesBalance(ctx.user.id);
+      const powerUps = await db.getActivePowerUps(ctx.user.id);
+      const chatUnlocks = await db.getUserChatUnlocks(ctx.user.id);
+
+      return {
+        ...premiumStatus,
+        superLikes,
+        powerUps,
+        chatUnlocks: chatUnlocks.map(u => u.targetUserId),
+      };
+    }),
+
+    // Check if user can message a specific user
+    canMessage: protectedProcedure
+      .input(z.object({ targetUserId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const canMessage = await db.canMessageUser(ctx.user.id, input.targetUserId);
+        return { canMessage };
       }),
   }),
 

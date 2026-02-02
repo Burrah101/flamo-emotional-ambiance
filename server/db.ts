@@ -12,7 +12,15 @@ import {
   modeHistory,
   InsertModeHistoryEntry,
   ownerNotifications,
-  InsertOwnerNotification
+  InsertOwnerNotification,
+  chatUnlocks,
+  InsertChatUnlock,
+  timeLimitedAccess,
+  InsertTimeLimitedAccess,
+  powerUps,
+  InsertPowerUp,
+  superLikesBalance,
+  InsertSuperLikesBalance
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1139,4 +1147,248 @@ export async function usePermission(permissionId: number) {
       usedAt: new Date(),
     })
     .where(eq(emotionalPermissions.id, permissionId));
+}
+
+
+// ============= Chat Unlock Helpers =============
+
+export async function createChatUnlock(data: { userId: number; targetUserId: number; price: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(chatUnlocks).values(data);
+}
+
+export async function hasChatUnlock(userId: number, targetUserId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const result = await db.select()
+    .from(chatUnlocks)
+    .where(
+      and(
+        eq(chatUnlocks.userId, userId),
+        eq(chatUnlocks.targetUserId, targetUserId)
+      )
+    )
+    .limit(1);
+
+  return result.length > 0;
+}
+
+export async function getUserChatUnlocks(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select()
+    .from(chatUnlocks)
+    .where(eq(chatUnlocks.userId, userId))
+    .orderBy(desc(chatUnlocks.createdAt));
+}
+
+// ============= Time-Limited Access Helpers =============
+
+export async function createTimeLimitedAccess(data: { 
+  userId: number; 
+  type: 'unlimited_messaging' | 'profile_views' | 'priority_discover'; 
+  expiresAt: Date; 
+  price: number 
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(timeLimitedAccess).values(data);
+}
+
+export async function hasActiveTimeLimitedAccess(
+  userId: number, 
+  type: 'unlimited_messaging' | 'profile_views' | 'priority_discover'
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const now = new Date();
+  const result = await db.select()
+    .from(timeLimitedAccess)
+    .where(
+      and(
+        eq(timeLimitedAccess.userId, userId),
+        eq(timeLimitedAccess.type, type),
+        gte(timeLimitedAccess.expiresAt, now)
+      )
+    )
+    .limit(1);
+
+  return result.length > 0;
+}
+
+export async function getActiveTimeLimitedAccess(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  return db.select()
+    .from(timeLimitedAccess)
+    .where(
+      and(
+        eq(timeLimitedAccess.userId, userId),
+        gte(timeLimitedAccess.expiresAt, now)
+      )
+    );
+}
+
+// ============= Power-Up Helpers =============
+
+export async function createPowerUp(data: { 
+  userId: number; 
+  type: 'profile_boost' | 'incognito' | 'super_like'; 
+  expiresAt?: Date;
+  multiplier?: number;
+  remainingUses?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(powerUps).values(data);
+}
+
+export async function hasActivePowerUp(
+  userId: number, 
+  type: 'profile_boost' | 'incognito' | 'super_like'
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const now = new Date();
+  const result = await db.select()
+    .from(powerUps)
+    .where(
+      and(
+        eq(powerUps.userId, userId),
+        eq(powerUps.type, type),
+        sql`(${powerUps.expiresAt} IS NULL OR ${powerUps.expiresAt} > ${now})`
+      )
+    )
+    .limit(1);
+
+  return result.length > 0;
+}
+
+export async function getActivePowerUps(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const now = new Date();
+  return db.select()
+    .from(powerUps)
+    .where(
+      and(
+        eq(powerUps.userId, userId),
+        sql`(${powerUps.expiresAt} IS NULL OR ${powerUps.expiresAt} > ${now})`
+      )
+    );
+}
+
+// ============= Super Likes Balance Helpers =============
+
+export async function getSuperLikesBalance(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db.select()
+    .from(superLikesBalance)
+    .where(eq(superLikesBalance.userId, userId))
+    .limit(1);
+
+  return result[0]?.balance || 0;
+}
+
+export async function addSuperLikes(userId: number, amount: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Check if user has a balance record
+  const existing = await db.select()
+    .from(superLikesBalance)
+    .where(eq(superLikesBalance.userId, userId))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing balance
+    await db.update(superLikesBalance)
+      .set({ 
+        balance: sql`${superLikesBalance.balance} + ${amount}`,
+        totalPurchased: sql`${superLikesBalance.totalPurchased} + ${amount}`,
+      })
+      .where(eq(superLikesBalance.userId, userId));
+  } else {
+    // Create new balance record
+    await db.insert(superLikesBalance).values({
+      userId,
+      balance: amount,
+      totalPurchased: amount,
+      totalUsed: 0,
+    });
+  }
+}
+
+export async function useSuperLike(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const balance = await getSuperLikesBalance(userId);
+  if (balance <= 0) return false;
+
+  await db.update(superLikesBalance)
+    .set({ 
+      balance: sql`${superLikesBalance.balance} - 1`,
+      totalUsed: sql`${superLikesBalance.totalUsed} + 1`,
+    })
+    .where(eq(superLikesBalance.userId, userId));
+
+  return true;
+}
+
+// ============= Combined Access Check Helpers =============
+
+/**
+ * Check if user can message another user.
+ * Returns true if: VIP subscriber, has chat unlock, or has unlimited tonight access.
+ */
+export async function canMessageUser(userId: number, targetUserId: number): Promise<boolean> {
+  // Check VIP subscription
+  const subscription = await getActiveSubscription(userId);
+  if (subscription) return true;
+
+  // Check chat unlock for specific user
+  const hasUnlock = await hasChatUnlock(userId, targetUserId);
+  if (hasUnlock) return true;
+
+  // Check unlimited tonight access
+  const hasUnlimitedTonight = await hasActiveTimeLimitedAccess(userId, 'unlimited_messaging');
+  if (hasUnlimitedTonight) return true;
+
+  return false;
+}
+
+/**
+ * Check if user has any premium access (VIP or time-limited).
+ */
+export async function hasPremiumAccess(userId: number): Promise<{ isPremium: boolean; type: string | null; expiresAt: Date | null }> {
+  // Check VIP subscription first
+  const subscription = await getActiveSubscription(userId);
+  if (subscription) {
+    return { isPremium: true, type: 'vip', expiresAt: subscription.expiresAt };
+  }
+
+  // Check time-limited access
+  const timeLimited = await getActiveTimeLimitedAccess(userId);
+  if (timeLimited.length > 0) {
+    const unlimitedMessaging = timeLimited.find(t => t.type === 'unlimited_messaging');
+    if (unlimitedMessaging) {
+      return { isPremium: true, type: 'unlimited_tonight', expiresAt: unlimitedMessaging.expiresAt };
+    }
+  }
+
+  return { isPremium: false, type: null, expiresAt: null };
 }

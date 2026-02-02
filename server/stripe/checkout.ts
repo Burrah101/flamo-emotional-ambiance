@@ -1,10 +1,10 @@
 /**
  * FLaMO Stripe Checkout Handlers
- * Creates checkout sessions for subscriptions and moment purchases.
+ * Creates checkout sessions for VIP subscriptions, one-time purchases, and power-ups.
  */
 
 import Stripe from 'stripe';
-import { getMomentById, getSubscriptionProduct } from './products';
+import { getMomentById, getOneTimeById, getPowerUpById, getSubscriptionProduct } from './products';
 
 // Initialize Stripe with secret key (lazy initialization to handle missing key)
 let stripe: Stripe | null = null;
@@ -30,7 +30,7 @@ interface CheckoutOptions {
 }
 
 /**
- * Create a checkout session for premium subscription
+ * Create a checkout session for VIP subscription
  */
 export async function createSubscriptionCheckout(
   type: 'monthly' | 'yearly',
@@ -65,10 +65,10 @@ export async function createSubscriptionCheckout(
       user_id: options.userId.toString(),
       customer_email: options.userEmail,
       customer_name: options.userName || '',
-      product_type: 'subscription',
+      product_type: 'vip_subscription',
       subscription_type: type,
     },
-    success_url: `${options.origin}/premium?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${options.origin}/premium?success=true&type=vip&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${options.origin}/premium?canceled=true`,
   });
 
@@ -76,7 +76,105 @@ export async function createSubscriptionCheckout(
 }
 
 /**
- * Create a checkout session for one-time moment purchase
+ * Create a checkout session for one-time purchase (single chat unlock, unlimited tonight)
+ */
+export async function createOneTimeCheckout(
+  productId: string,
+  options: CheckoutOptions & { targetUserId?: number }
+): Promise<string> {
+  const stripeClient = getStripeClient();
+  const product = getOneTimeById(productId);
+  
+  if (!product) {
+    throw new Error(`Invalid product ID: ${productId}`);
+  }
+
+  const session = await stripeClient.checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card'],
+    customer_email: options.userEmail,
+    client_reference_id: options.userId.toString(),
+    allow_promotion_codes: true,
+    line_items: [
+      {
+        price_data: {
+          currency: product.currency,
+          product_data: {
+            name: product.name,
+            description: product.description,
+          },
+          unit_amount: product.price,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      user_id: options.userId.toString(),
+      customer_email: options.userEmail,
+      customer_name: options.userName || '',
+      product_type: 'one_time',
+      product_id: productId,
+      target_user_id: options.targetUserId?.toString() || '',
+      duration_ms: product.duration?.toString() || '0',
+    },
+    success_url: `${options.origin}/premium?success=true&type=one_time&product=${productId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${options.origin}/premium?canceled=true`,
+  });
+
+  return session.url || '';
+}
+
+/**
+ * Create a checkout session for power-up purchase
+ */
+export async function createPowerUpCheckout(
+  productId: string,
+  options: CheckoutOptions
+): Promise<string> {
+  const stripeClient = getStripeClient();
+  const product = getPowerUpById(productId);
+  
+  if (!product) {
+    throw new Error(`Invalid power-up ID: ${productId}`);
+  }
+
+  const session = await stripeClient.checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card'],
+    customer_email: options.userEmail,
+    client_reference_id: options.userId.toString(),
+    allow_promotion_codes: true,
+    line_items: [
+      {
+        price_data: {
+          currency: product.currency,
+          product_data: {
+            name: product.name,
+            description: product.description,
+          },
+          unit_amount: product.price,
+        },
+        quantity: 1,
+      },
+    ],
+    metadata: {
+      user_id: options.userId.toString(),
+      customer_email: options.userEmail,
+      customer_name: options.userName || '',
+      product_type: 'power_up',
+      product_id: productId,
+      duration_ms: product.duration?.toString() || '0',
+      quantity: product.quantity?.toString() || '0',
+    },
+    success_url: `${options.origin}/premium?success=true&type=power_up&product=${productId}&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${options.origin}/premium?canceled=true`,
+  });
+
+  return session.url || '';
+}
+
+/**
+ * Create a checkout session for one-time moment purchase (legacy support)
  */
 export async function createMomentCheckout(
   momentId: string,
@@ -147,4 +245,21 @@ export function getStripe(): Stripe | null {
  */
 export function isStripeConfigured(): boolean {
   return !!process.env.STRIPE_SECRET_KEY;
+}
+
+/**
+ * Create a customer portal session for managing subscriptions
+ */
+export async function createCustomerPortalSession(
+  customerId: string,
+  returnUrl: string
+): Promise<string> {
+  const stripeClient = getStripeClient();
+  
+  const session = await stripeClient.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+  });
+
+  return session.url;
 }

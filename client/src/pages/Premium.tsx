@@ -86,19 +86,51 @@ export default function Premium() {
   const isPremium = useUserStore(state => state.isPremium);
   const setPremium = useUserStore(state => state.setPremium);
   
-  // Stripe mutations
+  // Stripe mutations for different purchase types
   const subscriptionCheckout = trpc.stripe.createSubscriptionCheckout.useMutation();
+  const oneTimeCheckout = trpc.stripe.createOneTimeCheckout.useMutation();
+  const powerUpCheckout = trpc.stripe.createPowerUpCheckout.useMutation();
   
   // Check for success/cancel from Stripe redirect
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     
     if (params.get('success') === 'true') {
-      const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-      setPremium(true, expiresAt);
-      toast.success('🔥 Welcome to VIP!', {
-        description: 'You now have unlimited messaging access.',
-      });
+      const type = params.get('type');
+      const product = params.get('product');
+      
+      if (type === 'vip') {
+        const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        setPremium(true, expiresAt);
+        toast.success('🔥 Welcome to VIP!', {
+          description: 'You now have unlimited messaging access.',
+        });
+      } else if (type === 'one_time') {
+        if (product === 'unlimited_tonight') {
+          // Calculate 6 AM expiry
+          const now = new Date();
+          const expiry = new Date(now);
+          if (now.getHours() < 6) {
+            expiry.setHours(6, 0, 0, 0);
+          } else {
+            expiry.setDate(expiry.getDate() + 1);
+            expiry.setHours(6, 0, 0, 0);
+          }
+          setPremium(true, expiry.getTime());
+          toast.success('⚡ Unlimited Tonight Activated!', {
+            description: 'Message anyone until 6 AM.',
+          });
+        } else if (product === 'single_chat') {
+          toast.success('💬 Chat Unlocked!', {
+            description: 'You can now message this person.',
+          });
+        }
+      } else if (type === 'power_up') {
+        toast.success('⚡ Power-Up Activated!', {
+          description: `Your ${product?.replace('_', ' ')} is now active.`,
+        });
+      }
+      
       navigate('/premium', { replace: true });
     } else if (params.get('canceled') === 'true') {
       toast.info('Payment canceled', {
@@ -108,28 +140,66 @@ export default function Premium() {
     }
   }, [searchString]);
   
-  const handlePurchase = async (planType: string) => {
+  const handlePurchase = async (planId: string) => {
     if (!isAuthenticated) {
       window.location.href = getLoginUrl();
       return;
     }
     
     setIsProcessing(true);
-    setSelectedPlan(planType);
+    setSelectedPlan(planId);
     
     try {
-      const result = await subscriptionCheckout.mutateAsync({ type: planType === 'vip' ? 'monthly' : 'monthly' });
+      let checkoutUrl: string | undefined;
       
-      if (result.checkoutUrl) {
+      // Route to correct checkout based on plan type
+      if (planId === 'vip') {
+        const result = await subscriptionCheckout.mutateAsync({ type: 'monthly' });
+        checkoutUrl = result.checkoutUrl;
+      } else if (planId === 'vip_yearly') {
+        const result = await subscriptionCheckout.mutateAsync({ type: 'yearly' });
+        checkoutUrl = result.checkoutUrl;
+      } else if (planId === 'single') {
+        // For single chat unlock, we need a target user
+        // This would typically be called from a profile page with a specific user
+        toast.info('Select a profile first', {
+          description: 'Go to someone\'s profile to unlock chat with them.',
+        });
+        setIsProcessing(false);
+        setSelectedPlan(null);
+        return;
+      } else if (planId === 'tonight') {
+        const result = await oneTimeCheckout.mutateAsync({ productId: 'unlimited_tonight' });
+        checkoutUrl = result.checkoutUrl;
+      } else if (planId === 'boost') {
+        const result = await powerUpCheckout.mutateAsync({ productId: 'profile_boost' });
+        checkoutUrl = result.checkoutUrl;
+      } else if (planId === 'superlike') {
+        const result = await powerUpCheckout.mutateAsync({ productId: 'super_likes' });
+        checkoutUrl = result.checkoutUrl;
+      } else if (planId === 'incognito') {
+        const result = await powerUpCheckout.mutateAsync({ productId: 'incognito' });
+        checkoutUrl = result.checkoutUrl;
+      }
+      
+      if (checkoutUrl) {
         toast.info('Redirecting to checkout...', {
           description: 'You will be taken to Stripe to complete payment.',
         });
-        window.open(result.checkoutUrl, '_blank');
+        // Open in same window for better mobile experience
+        window.location.href = checkoutUrl;
       }
-    } catch (error) {
-      toast.error('Something went wrong', {
-        description: 'Please try again later.',
-      });
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      if (error.message?.includes('Stripe is not configured')) {
+        toast.error('Payment not available', {
+          description: 'Stripe is not configured. Please contact support.',
+        });
+      } else {
+        toast.error('Something went wrong', {
+          description: 'Please try again later.',
+        });
+      }
     } finally {
       setIsProcessing(false);
       setSelectedPlan(null);
@@ -314,7 +384,7 @@ export default function Premium() {
                           <Loader2 className="w-5 h-5 animate-spin" />
                         ) : (
                           <>
-                            <CreditCard className="w-4 h-4" />
+                            <CreditCard className="w-5 h-5" />
                             Get {plan.name}
                           </>
                         )}
@@ -342,11 +412,16 @@ export default function Premium() {
                 <motion.button
                   key={boost.id}
                   className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center"
-                  onClick={() => toast.info(`${boost.name} coming soon!`)}
+                  onClick={() => handlePurchase(boost.id)}
+                  disabled={isProcessing}
                   whileHover={{ scale: 1.02, borderColor: 'rgba(255,255,255,0.2)' }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <boost.icon className="w-8 h-8 mx-auto mb-2 text-orange-400" />
+                  {isProcessing && selectedPlan === boost.id ? (
+                    <Loader2 className="w-8 h-8 mx-auto mb-2 text-orange-400 animate-spin" />
+                  ) : (
+                    <boost.icon className="w-8 h-8 mx-auto mb-2 text-orange-400" />
+                  )}
                   <p className="text-white text-sm font-medium mb-1">{boost.name}</p>
                   <p className="text-orange-400 font-bold">${boost.price}</p>
                 </motion.button>

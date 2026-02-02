@@ -362,7 +362,7 @@ export const payments = mysqlTable("payments", {
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   
   // Payment details
-  type: mysqlEnum("type", ["subscription", "moment_purchase", "emotional_permission"]).notNull(),
+  type: mysqlEnum("type", ["subscription", "moment_purchase", "emotional_permission", "vip_subscription", "one_time_purchase", "power_up"]).notNull(),
   amount: int("amount").notNull(), // in cents
   currency: varchar("currency", { length: 3 }).default("usd").notNull(),
   status: mysqlEnum("status", ["pending", "succeeded", "failed", "refunded"]).default("pending").notNull(),
@@ -502,3 +502,104 @@ export const eventAttendees = mysqlTable("event_attendees", {
 
 export type EventAttendee = typeof eventAttendees.$inferSelect;
 export type InsertEventAttendee = typeof eventAttendees.$inferInsert;
+
+
+// ============================================
+// NIGHTLIFE DATING VIP SYSTEM TABLES
+// ============================================
+
+/**
+ * Chat unlocks - one-time purchases to message specific users.
+ */
+export const chatUnlocks = mysqlTable("chat_unlocks", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // User who purchased the unlock
+  userId: int("userId").notNull(),
+  
+  // User they can now message
+  targetUserId: int("targetUserId").notNull(),
+  
+  // Payment info
+  price: int("price").notNull(), // in cents
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatUnlock = typeof chatUnlocks.$inferSelect;
+export type InsertChatUnlock = typeof chatUnlocks.$inferInsert;
+
+/**
+ * Time-limited access - temporary premium features.
+ * "Unlimited Tonight" and similar time-based purchases.
+ */
+export const timeLimitedAccess = mysqlTable("time_limited_access", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  userId: int("userId").notNull(),
+  
+  // Type of access
+  type: mysqlEnum("type", ["unlimited_messaging", "profile_views", "priority_discover"]).notNull(),
+  
+  // When access expires
+  expiresAt: timestamp("expiresAt").notNull(),
+  
+  // Payment info
+  price: int("price").notNull(), // in cents
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TimeLimitedAccess = typeof timeLimitedAccess.$inferSelect;
+export type InsertTimeLimitedAccess = typeof timeLimitedAccess.$inferInsert;
+
+/**
+ * Power-ups - temporary boosts and features.
+ * Profile Boost, Incognito Mode, etc.
+ */
+export const powerUps = mysqlTable("power_ups", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  userId: int("userId").notNull(),
+  
+  // Type of power-up
+  type: mysqlEnum("type", ["profile_boost", "incognito", "super_like"]).notNull(),
+  
+  // When power-up expires (null for consumables like super likes)
+  expiresAt: timestamp("expiresAt"),
+  
+  // For profile boost
+  multiplier: int("multiplier"),
+  
+  // For consumables - remaining uses
+  remainingUses: int("remainingUses"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PowerUp = typeof powerUps.$inferSelect;
+export type InsertPowerUp = typeof powerUps.$inferInsert;
+
+/**
+ * Super likes balance.
+ * Tracks how many super likes a user has.
+ */
+export const superLikesBalance = mysqlTable("super_likes_balance", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  userId: int("userId").notNull().unique(),
+  
+  // Current balance
+  balance: int("balance").default(0).notNull(),
+  
+  // Total purchased (for analytics)
+  totalPurchased: int("totalPurchased").default(0).notNull(),
+  
+  // Total used
+  totalUsed: int("totalUsed").default(0).notNull(),
+  
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SuperLikesBalance = typeof superLikesBalance.$inferSelect;
+export type InsertSuperLikesBalance = typeof superLikesBalance.$inferInsert;

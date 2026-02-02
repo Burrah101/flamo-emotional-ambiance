@@ -1,12 +1,12 @@
 /**
  * FLaMO Stripe Webhook Handler
- * Processes Stripe events for payments and subscriptions.
+ * Processes Stripe events for VIP subscriptions, one-time purchases, and power-ups.
  */
 
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { getStripe } from './checkout';
-import { getMomentById } from './products';
+import { getMomentById, getOneTimeById, getPowerUpById } from './products';
 import * as db from '../db';
 import { notifyOwner } from '../_core/notification';
 
@@ -93,77 +93,222 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`[Stripe Webhook] Checkout completed for user ${userId}, type: ${productType}`);
 
-  if (productType === 'subscription') {
-    // Handle subscription purchase
-    const subscriptionType = session.metadata?.subscription_type as 'monthly' | 'yearly';
+  switch (productType) {
+    case 'vip_subscription':
+      await handleVIPSubscription(session, userId);
+      break;
     
-    // Create payment record
-    await db.createPayment({
+    case 'one_time':
+      await handleOneTimePurchase(session, userId);
+      break;
+    
+    case 'power_up':
+      await handlePowerUpPurchase(session, userId);
+      break;
+    
+    case 'moment':
+      await handleMomentPurchase(session, userId);
+      break;
+    
+    // Legacy support
+    case 'subscription':
+      await handleVIPSubscription(session, userId);
+      break;
+    
+    default:
+      console.error(`[Stripe Webhook] Unknown product type: ${productType}`);
+  }
+}
+
+/**
+ * Handle VIP subscription purchase
+ */
+async function handleVIPSubscription(session: Stripe.Checkout.Session, userId: number) {
+  const subscriptionType = session.metadata?.subscription_type as 'monthly' | 'yearly';
+  
+  // Create payment record
+  await db.createPayment({
+    userId,
+    stripeCustomerId: session.customer as string,
+    stripeSubscriptionId: session.subscription as string,
+    type: 'vip_subscription',
+    amount: session.amount_total || 0,
+    currency: session.currency || 'usd',
+    status: 'succeeded',
+    itemId: subscriptionType,
+  });
+
+  // Create subscription in our database
+  const now = new Date();
+  const expiresAt = new Date(now);
+  if (subscriptionType === 'monthly') {
+    expiresAt.setMonth(expiresAt.getMonth() + 1);
+  } else {
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+  }
+
+  await db.createSubscription({
+    userId,
+    type: subscriptionType,
+    status: 'active',
+    expiresAt,
+  });
+
+  // Notify owner
+  await notifyOwner({
+    title: '🔥 New VIP Subscription!',
+    content: `User ${userId} subscribed to FLaMO VIP (${subscriptionType}). Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
+  });
+}
+
+/**
+ * Handle one-time purchase (single chat unlock, unlimited tonight)
+ */
+async function handleOneTimePurchase(session: Stripe.Checkout.Session, userId: number) {
+  const productId = session.metadata?.product_id || '';
+  const targetUserId = parseInt(session.metadata?.target_user_id || '0', 10);
+  const durationMs = parseInt(session.metadata?.duration_ms || '0', 10);
+  const product = getOneTimeById(productId);
+
+  // Create payment record
+  await db.createPayment({
+    userId,
+    stripeCustomerId: session.customer as string,
+    stripePaymentIntentId: session.payment_intent as string,
+    type: 'one_time_purchase',
+    amount: session.amount_total || 0,
+    currency: session.currency || 'usd',
+    status: 'succeeded',
+    itemId: productId,
+  });
+
+  // Handle different one-time purchase types
+  if (productId === 'single_chat' && targetUserId) {
+    // Unlock chat with specific user
+    await db.createChatUnlock({
       userId,
-      stripeCustomerId: session.customer as string,
-      stripeSubscriptionId: session.subscription as string,
-      type: 'subscription',
-      amount: session.amount_total || 0,
-      currency: session.currency || 'usd',
-      status: 'succeeded',
-      itemId: subscriptionType,
+      targetUserId,
+      price: session.amount_total || 0,
     });
-
-    // Create subscription in our database
-    const now = new Date();
-    const expiresAt = new Date(now);
-    if (subscriptionType === 'monthly') {
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-    } else {
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-    }
-
-    await db.createSubscription({
+  } else if (productId === 'unlimited_tonight') {
+    // Create time-limited access
+    const expiresAt = calculateTonightExpiry();
+    await db.createTimeLimitedAccess({
       userId,
-      type: subscriptionType,
-      status: 'active',
-      expiresAt,
-    });
-
-    // Notify owner
-    await notifyOwner({
-      title: 'New Premium Subscription!',
-      content: `User ${userId} subscribed to FLaMO Premium (${subscriptionType}). Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
-    });
-
-  } else if (productType === 'moment') {
-    // Handle moment purchase
-    const momentId = session.metadata?.moment_id || '';
-    const durationMs = parseInt(session.metadata?.duration_ms || '0', 10);
-    const moment = getMomentById(momentId);
-
-    // Create payment record
-    await db.createPayment({
-      userId,
-      stripeCustomerId: session.customer as string,
-      stripePaymentIntentId: session.payment_intent as string,
-      type: 'moment_purchase',
-      amount: session.amount_total || 0,
-      currency: session.currency || 'usd',
-      status: 'succeeded',
-      itemId: momentId,
-    });
-
-    // Create moment purchase
-    const expiresAt = new Date(Date.now() + durationMs);
-    await db.createMomentPurchase({
-      userId,
-      momentId,
+      type: 'unlimited_messaging',
       expiresAt,
       price: session.amount_total || 0,
     });
+  }
 
-    // Notify owner
-    await notifyOwner({
-      title: 'New Moment Purchase!',
-      content: `User ${userId} purchased ${moment?.name || momentId}. Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
+  // Notify owner
+  await notifyOwner({
+    title: '💰 New One-Time Purchase!',
+    content: `User ${userId} purchased ${product?.name || productId}. Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
+  });
+}
+
+/**
+ * Handle power-up purchase
+ */
+async function handlePowerUpPurchase(session: Stripe.Checkout.Session, userId: number) {
+  const productId = session.metadata?.product_id || '';
+  const durationMs = parseInt(session.metadata?.duration_ms || '0', 10);
+  const quantity = parseInt(session.metadata?.quantity || '0', 10);
+  const product = getPowerUpById(productId);
+
+  // Create payment record
+  await db.createPayment({
+    userId,
+    stripeCustomerId: session.customer as string,
+    stripePaymentIntentId: session.payment_intent as string,
+    type: 'power_up',
+    amount: session.amount_total || 0,
+    currency: session.currency || 'usd',
+    status: 'succeeded',
+    itemId: productId,
+  });
+
+  // Handle different power-up types
+  if (productId === 'profile_boost') {
+    const expiresAt = new Date(Date.now() + durationMs);
+    await db.createPowerUp({
+      userId,
+      type: 'profile_boost',
+      expiresAt,
+      multiplier: 10,
+    });
+  } else if (productId === 'super_likes') {
+    await db.addSuperLikes(userId, quantity);
+  } else if (productId === 'incognito') {
+    const expiresAt = new Date(Date.now() + durationMs);
+    await db.createPowerUp({
+      userId,
+      type: 'incognito',
+      expiresAt,
     });
   }
+
+  // Notify owner
+  await notifyOwner({
+    title: '⚡ New Power-Up Purchase!',
+    content: `User ${userId} purchased ${product?.name || productId}. Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
+  });
+}
+
+/**
+ * Handle moment purchase (legacy)
+ */
+async function handleMomentPurchase(session: Stripe.Checkout.Session, userId: number) {
+  const momentId = session.metadata?.moment_id || '';
+  const durationMs = parseInt(session.metadata?.duration_ms || '0', 10);
+  const moment = getMomentById(momentId);
+
+  // Create payment record
+  await db.createPayment({
+    userId,
+    stripeCustomerId: session.customer as string,
+    stripePaymentIntentId: session.payment_intent as string,
+    type: 'moment_purchase',
+    amount: session.amount_total || 0,
+    currency: session.currency || 'usd',
+    status: 'succeeded',
+    itemId: momentId,
+  });
+
+  // Create moment purchase
+  const expiresAt = new Date(Date.now() + durationMs);
+  await db.createMomentPurchase({
+    userId,
+    momentId,
+    expiresAt,
+    price: session.amount_total || 0,
+  });
+
+  // Notify owner
+  await notifyOwner({
+    title: '✨ New Moment Purchase!',
+    content: `User ${userId} purchased ${moment?.name || momentId}. Amount: $${((session.amount_total || 0) / 100).toFixed(2)}`,
+  });
+}
+
+/**
+ * Calculate expiry time for "Unlimited Tonight" (6 AM next morning)
+ */
+function calculateTonightExpiry(): Date {
+  const now = new Date();
+  const expiry = new Date(now);
+  
+  // If before 6 AM, expire at 6 AM today
+  // If after 6 AM, expire at 6 AM tomorrow
+  if (now.getHours() < 6) {
+    expiry.setHours(6, 0, 0, 0);
+  } else {
+    expiry.setDate(expiry.getDate() + 1);
+    expiry.setHours(6, 0, 0, 0);
+  }
+  
+  return expiry;
 }
 
 /**
@@ -186,7 +331,7 @@ async function handleSubscriptionCanceled(subscription: Stripe.Subscription) {
   // The subscription will naturally expire based on expiresAt
   
   await notifyOwner({
-    title: 'Subscription Canceled',
+    title: '😢 Subscription Canceled',
     content: `Stripe subscription ${subscription.id} was canceled.`,
   });
 }
@@ -209,7 +354,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   console.log(`[Stripe Webhook] Invoice ${invoice.id} payment failed`);
   
   await notifyOwner({
-    title: 'Payment Failed',
+    title: '⚠️ Payment Failed',
     content: `Invoice ${invoice.id} payment failed. Customer may need to update payment method.`,
   });
 }
