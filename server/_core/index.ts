@@ -59,15 +59,22 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  // In production, use PORT directly (Railway sets this)
+  // In development, find an available port
+  let port: number;
+  if (process.env.NODE_ENV === "production" && process.env.PORT) {
+    port = parseInt(process.env.PORT);
+    console.log(`[Production] Using PORT from environment: ${port}`);
+  } else {
+    const preferredPort = parseInt(process.env.PORT || "3000");
+    port = await findAvailablePort(preferredPort);
+    if (port !== preferredPort) {
+      console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    }
   }
 
   // Listen on 0.0.0.0 for Railway/Docker deployment
-  const host = process.env.HOST || '0.0.0.0';
+  const host = '0.0.0.0';
   server.listen(port, host, () => {
     console.log(`Server running on http://${host}:${port}/`);
   });
