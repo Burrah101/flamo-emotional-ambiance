@@ -28,6 +28,8 @@ import Chat from "./pages/Chat";
 import SplashScreen from "./pages/SplashScreen";
 import ProfileSetup from "./pages/ProfileSetup";
 import NightlifeMap from "./pages/NightlifeMap";
+import VibeLock from "./pages/VibeLock";
+import Events from "./pages/Events";
 
 // Wrapper component to handle onboarding redirect
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -106,9 +108,19 @@ function Router() {
           <Chat />
         </OnboardingGuard>
       </Route>
-      <Route path="/map">
+     <Route path="/map">
         <OnboardingGuard>
           <NightlifeMap />
+        </OnboardingGuard>
+      </Route>
+      <Route path="/vibelock">
+        <OnboardingGuard>
+          <VibeLock />
+        </OnboardingGuard>
+      </Route>
+      <Route path="/events">
+        <OnboardingGuard>
+          <Events />
         </OnboardingGuard>
       </Route>
       

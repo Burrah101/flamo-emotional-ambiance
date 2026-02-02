@@ -328,7 +328,7 @@ export default function Premium() {
               {plans.map((plan, index) => (
                 <motion.div
                   key={plan.id}
-                  className={`relative p-5 rounded-2xl bg-gradient-to-br ${plan.color.replace('from-', 'from-').replace('to-', 'to-')}/10 ${plan.borderColor} border overflow-hidden`}
+                  className={`relative p-5 rounded-2xl bg-white/5 ${plan.borderColor} border overflow-hidden`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
