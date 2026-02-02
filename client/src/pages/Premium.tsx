@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useSearch } from 'wouter';
 import { useUserStore } from '../state/userStore';
-import { FLAMO_CONFIG } from '../core/flamoConfig';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { trpc } from '@/lib/trpc';
@@ -17,34 +16,25 @@ import {
   Crown, 
   Check, 
   Sparkles,
-  Heart,
   MessageCircle,
   Zap,
-  Clock,
   CreditCard,
   Loader2,
   Flame,
   Star,
   Eye,
-  Send,
-  Infinity,
   Shield
 } from 'lucide-react';
 
 // Floating embers background
 function FloatingEmbers() {
-  const [embers, setEmbers] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
-  
-  useEffect(() => {
-    const newEmbers = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      delay: Math.random() * 5,
-    }));
-    setEmbers(newEmbers);
-  }, []);
+  const embers = Array.from({ length: 15 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 3 + 1,
+    delay: Math.random() * 5,
+  }));
   
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -80,11 +70,17 @@ export default function Premium() {
   const searchString = useSearch();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   
   const isPremium = useUserStore(state => state.isPremium);
   const setPremium = useUserStore(state => state.setPremium);
+  
+  // Wait for hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
   
   // Stripe mutations for different purchase types
   const subscriptionCheckout = trpc.stripe.createSubscriptionCheckout.useMutation();
@@ -107,7 +103,6 @@ export default function Premium() {
         });
       } else if (type === 'one_time') {
         if (product === 'unlimited_tonight') {
-          // Calculate 6 AM expiry
           const now = new Date();
           const expiry = new Date(now);
           if (now.getHours() < 6) {
@@ -152,7 +147,6 @@ export default function Premium() {
     try {
       let checkoutUrl: string | undefined;
       
-      // Route to correct checkout based on plan type
       if (planId === 'vip') {
         const result = await subscriptionCheckout.mutateAsync({ type: 'monthly' });
         checkoutUrl = result.checkoutUrl;
@@ -160,8 +154,6 @@ export default function Premium() {
         const result = await subscriptionCheckout.mutateAsync({ type: 'yearly' });
         checkoutUrl = result.checkoutUrl;
       } else if (planId === 'single') {
-        // For single chat unlock, we need a target user
-        // This would typically be called from a profile page with a specific user
         toast.info('Select a profile first', {
           description: 'Go to someone\'s profile to unlock chat with them.',
         });
@@ -186,7 +178,6 @@ export default function Premium() {
         toast.info('Redirecting to checkout...', {
           description: 'You will be taken to Stripe to complete payment.',
         });
-        // Open in same window for better mobile experience
         window.location.href = checkoutUrl;
       }
     } catch (error: any) {
@@ -307,8 +298,8 @@ export default function Premium() {
         </header>
         
         <main className="px-6 pb-8 overflow-y-auto">
-          {/* Already VIP */}
-          {isPremium && (
+          {/* Already VIP Banner */}
+          {isHydrated && isPremium && (
             <motion.div
               className="p-6 rounded-3xl bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 text-center mb-8"
               initial={{ opacity: 0, y: 20 }}
@@ -322,79 +313,82 @@ export default function Premium() {
             </motion.div>
           )}
           
-          {/* Pricing plans */}
-          {!isPremium && (
-            <div className="space-y-4 mb-8">
-              {plans.map((plan, index) => (
-                <motion.div
-                  key={plan.id}
-                  className={`relative p-5 rounded-2xl bg-white/5 ${plan.borderColor} border overflow-hidden`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.01 }}
-                >
-                  {/* Best value badge */}
-                  {plan.bestValue && (
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-bl-xl">
-                      BEST VALUE
-                    </div>
-                  )}
+          {/* Pricing plans - Always visible */}
+          <div className="space-y-4 mb-8">
+            {plans.map((plan, index) => (
+              <motion.div
+                key={plan.id}
+                className={`relative p-5 rounded-2xl bg-white/5 ${plan.borderColor} border overflow-hidden`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.01 }}
+              >
+                {/* Best value badge */}
+                {plan.bestValue && (
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-yellow-500 text-black text-xs font-bold rounded-bl-xl">
+                    BEST VALUE
+                  </div>
+                )}
+                
+                {/* Popular badge */}
+                {plan.popular && (
+                  <div className="absolute top-0 right-0 px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-bl-xl">
+                    POPULAR
+                  </div>
+                )}
+                
+                <div className="flex items-start gap-4">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
+                    <plan.icon className="w-6 h-6 text-white" />
+                  </div>
                   
-                  {/* Popular badge */}
-                  {plan.popular && (
-                    <div className="absolute top-0 right-0 px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-bl-xl">
-                      POPULAR
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                      <span className="text-xl font-bold text-white">
+                        ${plan.price}
+                        {plan.priceLabel && <span className="text-sm text-white/50">{plan.priceLabel}</span>}
+                      </span>
                     </div>
-                  )}
-                  
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.color} flex items-center justify-center flex-shrink-0`}>
-                      <plan.icon className="w-6 h-6 text-white" />
+                    <p className="text-white/50 text-sm mb-3">{plan.description}</p>
+                    
+                    {/* Features */}
+                    <div className="space-y-1.5 mb-4">
+                      {plan.features.map((feature) => (
+                        <div key={feature} className="flex items-center gap-2 text-sm text-white/70">
+                          <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          {feature}
+                        </div>
+                      ))}
                     </div>
                     
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                        <span className="text-xl font-bold text-white">
-                          ${plan.price}
-                          {plan.priceLabel && <span className="text-sm text-white/50">{plan.priceLabel}</span>}
-                        </span>
-                      </div>
-                      <p className="text-white/50 text-sm mb-3">{plan.description}</p>
-                      
-                      {/* Features */}
-                      <div className="space-y-1.5 mb-4">
-                        {plan.features.map((feature) => (
-                          <div key={feature} className="flex items-center gap-2 text-sm text-white/70">
-                            <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            {feature}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      <motion.button
-                        className={`w-full py-3 rounded-xl bg-gradient-to-r ${plan.color} text-white font-semibold flex items-center justify-center gap-2`}
-                        onClick={() => handlePurchase(plan.id)}
-                        disabled={isProcessing}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        {isProcessing && selectedPlan === plan.id ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <>
-                            <CreditCard className="w-5 h-5" />
-                            Get {plan.name}
-                          </>
-                        )}
-                      </motion.button>
-                    </div>
+                    <motion.button
+                      className={`w-full py-3 rounded-xl bg-gradient-to-r ${plan.color} text-white font-semibold flex items-center justify-center gap-2 ${isPremium && plan.id === 'vip' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      onClick={() => handlePurchase(plan.id)}
+                      disabled={isProcessing || (isPremium && plan.id === 'vip')}
+                      whileHover={!(isPremium && plan.id === 'vip') ? { scale: 1.02 } : {}}
+                      whileTap={!(isPremium && plan.id === 'vip') ? { scale: 0.98 } : {}}
+                    >
+                      {isProcessing && selectedPlan === plan.id ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : isPremium && plan.id === 'vip' ? (
+                        <>
+                          <Check className="w-5 h-5" />
+                          Already VIP
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-5 h-5" />
+                          Get {plan.name}
+                        </>
+                      )}
+                    </motion.button>
                   </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
           
           {/* Boosts section */}
           <motion.div
@@ -451,14 +445,9 @@ export default function Premium() {
           </motion.div>
           
           {/* Test mode notice */}
-          <motion.p
-            className="text-center text-white/30 text-xs mt-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-          >
-            <strong>Test Mode:</strong> Use card 4242 4242 4242 4242 with any future expiry and CVC.
-          </motion.p>
+          <p className="text-center text-white/30 text-xs mt-6">
+            Test mode • Use card 4242 4242 4242 4242
+          </p>
         </main>
       </div>
     </div>
