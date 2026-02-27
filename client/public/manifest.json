@@ -1,54 +1,15 @@
 {
-  "name": "FLaMO — Shared Presence",
+  "name": "FLaMO Nightlife Dating",
   "short_name": "FLaMO",
-  "description": "Share presence, not words. An emotional ambiance app for mood-based experiences.",
+  "description": "Find your flame tonight. The ultimate nightlife dating experience.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a12",
-  "theme_color": "#6366f1",
-  "orientation": "portrait-primary",
-  "scope": "/",
-  "categories": ["lifestyle", "social", "health"],
+  "background_color": "#0a0a0f",
+  "theme_color": "#ff6a00",
   "icons": [
-    {
-      "src": "/icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -58,46 +19,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Home Screen"
-    },
-    {
-      "src": "/screenshots/experience.png",
-      "sizes": "1080x1920",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mode Experience"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Focus Mode",
-      "short_name": "Focus",
-      "description": "Enter Focus mode",
-      "url": "/?mode=focus",
-      "icons": [{ "src": "/icons/focus.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Chill Mode",
-      "short_name": "Chill",
-      "description": "Enter Chill mode",
-      "url": "/?mode=chill",
-      "icons": [{ "src": "/icons/chill.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Sleep Mode",
-      "short_name": "Sleep",
-      "description": "Enter Sleep mode",
-      "url": "/?mode=sleep",
-      "icons": [{ "src": "/icons/sleep.png", "sizes": "96x96" }]
-    }
-  ],
-  "related_applications": [],
-  "prefer_related_applications": false
+  ]
 }
