@@ -86,9 +86,7 @@ export default function ProfileSetup() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handlePhotoChange = (url: string) => {
-    setPhotoUrl(url);
-  };
+
 
   const handleVerificationComplete = (verified: boolean) => {
     setIsVerified(verified);
@@ -239,7 +237,7 @@ export default function ProfileSetup() {
                   name={username}
                   size="xl"
                   editable
-                  onPhotoChange={handlePhotoChange}
+                  onPhotoChange={(url) => setPhotoUrl(url)}
                   verified={isVerified}
                   showVerifiedBadge
                 />
