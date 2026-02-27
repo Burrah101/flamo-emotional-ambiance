@@ -201,7 +201,7 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      console.warn("[Auth] Missing session cookie in verifySession");
       return null;
     }
 
@@ -217,9 +217,9 @@ class SDKServer {
         !isNonEmptyString(appId) ||
         !isNonEmptyString(name)
       ) {
-        console.warn("[Auth] Session payload missing required fields");
-        return null;
-      }
+      console.warn("[Auth] Session payload missing required fields", payload);
+      return null;
+    }
 
       return {
         openId,
@@ -227,7 +227,7 @@ class SDKServer {
         name,
       };
     } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
+      console.error("[Auth] Session verification failed", String(error), cookieValue);
       return null;
     }
   }
