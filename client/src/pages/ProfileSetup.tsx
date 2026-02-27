@@ -35,10 +35,19 @@ export default function ProfileSetup() {
   const saveProfile = trpc.profile.update.useMutation({
     onSuccess: () => {
       toast.success('Profile created! 🔥');
-      setLocation('/');
+      setLocation('/discover');
     },
-    onError: () => {
-      toast.error('Something went wrong');
+    onError: (error) => {
+      toast.error(error.message || 'Failed to save profile');
+    },
+  });
+
+  const updateLocation = trpc.profile.updateLocation.useMutation({
+    onSuccess: () => {
+      toast.success('Location saved!');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to save location');
     },
   });
 
@@ -58,13 +67,17 @@ export default function ProfileSetup() {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      // Save profile
+      // Save profile with all data
+      const displayName = username || 'Anonymous';
+      const bio = '';
+      const avatarUrl = photoUrl || '';
+      
       saveProfile.mutate({
-        username,
-        currentMood: selectedMood!,
-        preference: preference!,
-        photoUrl,
-        isVerified,
+        displayName,
+        bio,
+        avatarUrl,
+        meetupIntent: preference === 'vibes' ? 'friends_only' : 'open',
+        isDiscoverable: true, // Enable discovery after profile setup
       });
     }
   };

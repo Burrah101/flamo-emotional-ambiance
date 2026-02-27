@@ -27,6 +27,7 @@ import Matches from "./pages/Matches";
 import Chat from "./pages/Chat";
 import SplashScreen from "./pages/SplashScreen";
 import ProfileSetup from "./pages/ProfileSetup";
+import { ProfileGuard } from "./components/ProfileGuard";
 import NightlifeMap from "./pages/NightlifeMap";
 import VibeLock from "./pages/VibeLock";
 import Events from "./pages/Events";
@@ -95,7 +96,9 @@ function Router() {
       </Route>
       <Route path="/discover">
         <OnboardingGuard>
-          <Discover />
+          <ProfileGuard>
+            <Discover />
+          </ProfileGuard>
         </OnboardingGuard>
       </Route>
       <Route path="/matches">
