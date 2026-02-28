@@ -262,11 +262,10 @@ class SDKServer {
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
 
-    if (!session) {
+    if (!sessionCookie) {
+      console.error("[Auth] Missing session cookie in authenticateRequest. Request headers: ", req.headers);
       throw ForbiddenError("Invalid session cookie");
-    }
-
-    const sessionUserId = session.openId;
+    }const sessionUserId = session.openId;
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
