@@ -27,6 +27,7 @@ import Matches from "./pages/Matches";
 import Chat from "./pages/Chat";
 import SplashScreen from "./pages/SplashScreen";
 import ProfileSetup from "./pages/ProfileSetup";
+import Auth from "./pages/Auth";
 import { ProfileGuard } from "./components/ProfileGuard";
 import NightlifeMap from "./pages/NightlifeMap";
 import VibeLock from "./pages/VibeLock";
@@ -48,6 +49,7 @@ function Router() {
   return (
     <Switch>
       {/* Onboarding and setup routes - always accessible */}
+      <Route path="/auth" component={Auth} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/setup" component={ProfileSetup} />
       

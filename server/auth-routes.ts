@@ -1,0 +1,110 @@
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { z } from "zod";
+import { publicProcedure, router } from "./_core/trpc";
+import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
+import * as db from "./db";
+import * as crypto from "crypto";
+
+export const authRouter = router({
+  me: publicProcedure.query(opts => opts.ctx.user),
+  
+  signup: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string().min(6),
+      name: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Check if user already exists
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) {
+          throw new Error('Email already registered');
+        }
+        
+        // Hash password
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
+        
+        // Create user
+        const user = await db.upsertUser({
+          email: input.email,
+          name: input.name,
+          openId: input.email,
+          passwordHash: `${salt}:${hash}`,
+          loginMethod: 'email',
+          lastSignedIn: new Date(),
+        });
+        
+        // Create session token
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || '',
+        });
+        
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        
+        return { success: true, user };
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : 'Signup failed');
+      }
+    }),
+  
+  login: publicProcedure
+    .input(z.object({
+      email: z.string().email(),
+      password: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        // Find user
+        const user = await db.getUserByEmail(input.email);
+        if (!user) {
+          throw new Error('Invalid email or password');
+        }
+        
+        // Verify password
+        const passwordHash = user.passwordHash as string | null;
+        if (!passwordHash) {
+          throw new Error('Invalid email or password');
+        }
+        
+        const [salt, hash] = passwordHash.split(':');
+        if (!salt || !hash) {
+          throw new Error('Invalid email or password');
+        }
+        
+        const inputHash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
+        if (inputHash !== hash) {
+          throw new Error('Invalid email or password');
+        }
+        
+        // Create session token
+        const sessionToken = await sdk.createSessionToken(user.openId, {
+          name: user.name || '',
+        });
+        
+        // Set cookie
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        
+        // Update last signed in
+        await db.upsertUser({
+          openId: user.openId,
+          lastSignedIn: new Date(),
+        });
+        
+        return { success: true, user };
+      } catch (error) {
+        throw new Error(error instanceof Error ? error.message : 'Login failed');
+      }
+    }),
+  
+  logout: publicProcedure.mutation(({ ctx }) => {
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    return { success: true } as const;
+  }),
+});
