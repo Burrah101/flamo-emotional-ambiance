@@ -260,6 +260,8 @@ class SDKServer {
     // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
+    console.log("[Auth] Received cookie header:", req.headers.cookie);
+    console.log("[Auth] Extracted session cookie:", sessionCookie);
     const session = await this.verifySession(sessionCookie);
 
     if (!sessionCookie) {
