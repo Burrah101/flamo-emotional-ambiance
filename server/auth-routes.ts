@@ -5,8 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import * as db from "./db";
 import { createUserInMemory, getUserByEmailInMemory, getUserByOpenIdInMemory } from "./memory-store";
-import * as crypto from "crypto";
-import { randomUUID } from "crypto";
+
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 
 export const authRouter = router({
@@ -26,12 +25,11 @@ export const authRouter = router({
           throw new Error('Email already registered');
         }
         
-        // Hash password
-        const salt = Math.random().toString(36).substring(2, 15);
-        const hash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
+        // Simple password hash (not secure, for testing only)
+        const hash = Buffer.from(input.password).toString('base64');
         
         // Create user with unique openId
-        const openId = `email_${randomUUID()}`;
+        const openId = `email_${Date.now()}_${Math.random().toString(36).substring(7)}`;
         console.log('[Auth] Creating user with openId:', openId);
         const user = createUserInMemory({
           email: input.email,
@@ -80,13 +78,9 @@ export const authRouter = router({
           throw new Error('Invalid email or password');
         }
         
-        const [salt, hash] = passwordHash.split(':');
-        if (!salt || !hash) {
-          throw new Error('Invalid email or password');
-        }
-        
-        const inputHash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
-        if (inputHash !== hash) {
+        // Verify password (simple comparison for testing)
+        const inputHash = Buffer.from(input.password).toString('base64');
+        if (inputHash !== passwordHash) {
           throw new Error('Invalid email or password');
         }
         
