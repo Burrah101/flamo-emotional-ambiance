@@ -27,11 +27,22 @@ import { ENV } from './_core/env';
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
+    const dbUrl = process.env.DATABASE_URL;
+    console.log("[Database] DATABASE_URL present:", !!dbUrl);
+    console.log("[Database] DATABASE_URL:", dbUrl ? dbUrl.substring(0, 50) + "..." : "NOT SET");
+    
+    if (!dbUrl) {
+      console.error("[Database] ERROR: DATABASE_URL environment variable is not set!");
+      return null;
+    }
+    
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      console.log("[Database] Attempting to connect to database...");
+      _db = drizzle(dbUrl);
+      console.log("[Database] Successfully connected to database");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
