@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export default function Auth() {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [isSignup, setIsSignup] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +32,7 @@ export default function Auth() {
       } else {
         await loginMutation.mutateAsync({ email, password });
       }
-      navigate("/onboarding");
+      setLocation("/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
