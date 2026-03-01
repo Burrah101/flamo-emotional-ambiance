@@ -4,7 +4,7 @@ import { publicProcedure, router } from "./_core/trpc";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import * as db from "./db";
-import { createUserDirect } from "./db-simple";
+import { createUserInMemory, getUserByEmailInMemory, getUserByOpenIdInMemory } from "./memory-store";
 import * as crypto from "crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 
@@ -32,18 +32,17 @@ export const authRouter = router({
         // Create user with unique openId
         const openId = `email_${crypto.randomBytes(8).toString('hex')}`;
         console.log('[Auth] Creating user with openId:', openId);
-        const user = await createUserDirect({
+        const user = createUserInMemory({
           email: input.email,
           name: input.name,
           openId: openId,
           passwordHash: `${salt}:${hash}`,
           loginMethod: 'email',
-          lastSignedIn: new Date(),
         });
         
-        console.log('[Auth] User returned from createUserDirect:', user);
+        console.log('[Auth] User created:', user);
         if (!user) {
-          throw new Error('Failed to create user - createUserDirect returned null');
+          throw new Error('Failed to create user');
         }
         
         // Create session token
@@ -69,7 +68,7 @@ export const authRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         // Find user
-        const user = await db.getUserByEmail(input.email);
+        const user = getUserByEmailInMemory(input.email);
         if (!user) {
           throw new Error('Invalid email or password');
         }
