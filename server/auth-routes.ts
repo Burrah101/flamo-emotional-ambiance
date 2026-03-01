@@ -4,7 +4,9 @@ import { publicProcedure, router } from "./_core/trpc";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { sdk } from "./_core/sdk";
 import * as db from "./db";
+import { createUserDirect } from "./db-simple";
 import * as crypto from "crypto";
+import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 
 export const authRouter = router({
   me: publicProcedure.query(opts => opts.ctx.user),
@@ -30,7 +32,7 @@ export const authRouter = router({
         // Create user with unique openId
         const openId = `email_${crypto.randomBytes(8).toString('hex')}`;
         console.log('[Auth] Creating user with openId:', openId);
-        const user = await db.upsertUser({
+        const user = await createUserDirect({
           email: input.email,
           name: input.name,
           openId: openId,
@@ -39,9 +41,9 @@ export const authRouter = router({
           lastSignedIn: new Date(),
         });
         
-        console.log('[Auth] User returned from upsertUser:', user);
+        console.log('[Auth] User returned from createUserDirect:', user);
         if (!user) {
-          throw new Error('Failed to create user - upsertUser returned undefined');
+          throw new Error('Failed to create user - createUserDirect returned null');
         }
         
         // Create session token
