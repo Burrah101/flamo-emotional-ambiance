@@ -29,6 +29,7 @@ export const authRouter = router({
         
         // Create user with unique openId
         const openId = `email_${crypto.randomBytes(8).toString('hex')}`;
+        console.log('[Auth] Creating user with openId:', openId);
         const user = await db.upsertUser({
           email: input.email,
           name: input.name,
@@ -38,8 +39,9 @@ export const authRouter = router({
           lastSignedIn: new Date(),
         });
         
+        console.log('[Auth] User returned from upsertUser:', user);
         if (!user) {
-          throw new Error('Failed to create user');
+          throw new Error('Failed to create user - upsertUser returned undefined');
         }
         
         // Create session token

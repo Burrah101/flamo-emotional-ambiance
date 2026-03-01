@@ -95,7 +95,11 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
     });
     
     // Return the user after upserting
-    return await getUserByOpenId(user.openId);
+    const result = await getUserByOpenId(user.openId);
+    if (!result) {
+      console.error("[Database] User not found after upsert:", user.openId);
+    }
+    return result;
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
