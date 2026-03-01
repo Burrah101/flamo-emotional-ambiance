@@ -6,6 +6,7 @@ import { sdk } from "./_core/sdk";
 import * as db from "./db";
 import { createUserInMemory, getUserByEmailInMemory, getUserByOpenIdInMemory } from "./memory-store";
 import * as crypto from "crypto";
+import { randomUUID } from "crypto";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../shared/const";
 
 export const authRouter = router({
@@ -26,11 +27,11 @@ export const authRouter = router({
         }
         
         // Hash password
-        const salt = crypto.randomBytes(16).toString('hex');
+        const salt = Math.random().toString(36).substring(2, 15);
         const hash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
         
         // Create user with unique openId
-        const openId = `email_${crypto.randomBytes(8).toString('hex')}`;
+        const openId = `email_${randomUUID()}`;
         console.log('[Auth] Creating user with openId:', openId);
         const user = createUserInMemory({
           email: input.email,
@@ -98,11 +99,7 @@ export const authRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         
-        // Update last signed in
-        await db.upsertUser({
-          openId: user.openId,
-          lastSignedIn: new Date(),
-        });
+        // Note: In-memory store doesn't persist, so we skip DB update
         
         return { success: true, user };
       } catch (error) {
