@@ -35,7 +35,7 @@ export const authRouter = router({
           email: input.email,
           name: input.name,
           openId: openId,
-          passwordHash: `${salt}:${hash}`,
+          passwordHash: hash,
           loginMethod: 'email',
         });
         
