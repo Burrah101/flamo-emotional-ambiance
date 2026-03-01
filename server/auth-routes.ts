@@ -27,15 +27,20 @@ export const authRouter = router({
         const salt = crypto.randomBytes(16).toString('hex');
         const hash = crypto.pbkdf2Sync(input.password, salt, 1000, 64, 'sha512').toString('hex');
         
-        // Create user
+        // Create user with unique openId
+        const openId = `email_${crypto.randomBytes(8).toString('hex')}`;
         const user = await db.upsertUser({
           email: input.email,
           name: input.name,
-          openId: input.email,
+          openId: openId,
           passwordHash: `${salt}:${hash}`,
           loginMethod: 'email',
           lastSignedIn: new Date(),
         });
+        
+        if (!user) {
+          throw new Error('Failed to create user');
+        }
         
         // Create session token
         const sessionToken = await sdk.createSessionToken(user.openId, {
