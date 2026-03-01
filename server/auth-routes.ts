@@ -44,10 +44,8 @@ export const authRouter = router({
           throw new Error('Failed to create user');
         }
         
-        // Create session token
-        const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.name || '',
-        });
+        // Create simple session token (just use openId for now)
+        const sessionToken = Buffer.from(JSON.stringify({ openId: user.openId, name: user.name })).toString('base64');
         
         // Set cookie
         const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -84,10 +82,8 @@ export const authRouter = router({
           throw new Error('Invalid email or password');
         }
         
-        // Create session token
-        const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.name || '',
-        });
+        // Create simple session token (just use openId for now)
+        const sessionToken = Buffer.from(JSON.stringify({ openId: user.openId, name: user.name })).toString('base64');
         
         // Set cookie
         const cookieOptions = getSessionCookieOptions(ctx.req);
